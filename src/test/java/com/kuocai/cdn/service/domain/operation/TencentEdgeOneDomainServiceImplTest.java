@@ -1,0 +1,1015 @@
+package com.kuocai.cdn.service.domain.operation;
+
+import com.kuocai.cdn.api.DomainCacheInfo;
+import com.kuocai.cdn.api.DomainVisitInfo;
+import com.kuocai.cdn.api.huawei.cdn.dto.CacheRuleDTO;
+import com.kuocai.cdn.api.huawei.cdn.dto.ErrorCodeCacheDTO;
+import com.kuocai.cdn.api.huawei.cdn.dto.UrlAuthDTO;
+import com.kuocai.cdn.api.tencent.edgeone.TencentEdgeOneClient;
+import com.kuocai.cdn.entity.CdnDomain;
+import com.kuocai.cdn.vo.EdgeOneSecurityPolicyVo;
+import com.kuocai.cdn.vo.IgnoreQueryStringDTO;
+import com.tencentcloudapi.common.exception.TencentCloudSDKException;
+import com.tencentcloudapi.teo.v20220901.models.AccelerationDomain;
+import com.tencentcloudapi.teo.v20220901.models.AdaptiveFrequencyControl;
+import com.tencentcloudapi.teo.v20220901.models.AICrawlerDetection;
+import com.tencentcloudapi.teo.v20220901.models.BandwidthAbuseDefense;
+import com.tencentcloudapi.teo.v20220901.models.BotManagement;
+import com.tencentcloudapi.teo.v20220901.models.BotManagementLite;
+import com.tencentcloudapi.teo.v20220901.models.CacheConfigCustomTime;
+import com.tencentcloudapi.teo.v20220901.models.CacheConfigParameters;
+import com.tencentcloudapi.teo.v20220901.models.CAPTCHAPageChallenge;
+import com.tencentcloudapi.teo.v20220901.models.ClientFiltering;
+import com.tencentcloudapi.teo.v20220901.models.CustomRule;
+import com.tencentcloudapi.teo.v20220901.models.CustomRules;
+import com.tencentcloudapi.teo.v20220901.models.DenyActionParameters;
+import com.tencentcloudapi.teo.v20220901.models.HttpDDoSProtection;
+import com.tencentcloudapi.teo.v20220901.models.IPv6Parameters;
+import com.tencentcloudapi.teo.v20220901.models.ManagedRuleAutoUpdate;
+import com.tencentcloudapi.teo.v20220901.models.ManagedRuleGroup;
+import com.tencentcloudapi.teo.v20220901.models.ManagedRuleGroupMeta;
+import com.tencentcloudapi.teo.v20220901.models.ManagedRules;
+import com.tencentcloudapi.teo.v20220901.models.MinimalRequestBodyTransferRate;
+import com.tencentcloudapi.teo.v20220901.models.ModifyAccelerationDomainRequest;
+import com.tencentcloudapi.teo.v20220901.models.ModifyL7AccRuleRequest;
+import com.tencentcloudapi.teo.v20220901.models.ModifySecurityPolicyRequest;
+import com.tencentcloudapi.teo.v20220901.models.NoCache;
+import com.tencentcloudapi.teo.v20220901.models.OriginDetail;
+import com.tencentcloudapi.teo.v20220901.models.OriginGroup;
+import com.tencentcloudapi.teo.v20220901.models.OriginInfo;
+import com.tencentcloudapi.teo.v20220901.models.OriginRecord;
+import com.tencentcloudapi.teo.v20220901.models.RequestBodyTransferTimeout;
+import com.tencentcloudapi.teo.v20220901.models.RuleEngineItem;
+import com.tencentcloudapi.teo.v20220901.models.SecurityAction;
+import com.tencentcloudapi.teo.v20220901.models.SecurityPolicy;
+import com.tencentcloudapi.teo.v20220901.models.SlowAttackDefense;
+import com.tencentcloudapi.teo.v20220901.models.ZoneConfig;
+import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class TencentEdgeOneDomainServiceImplTest {
+
+    private final TencentEdgeOneDomainServiceImpl service = new TencentEdgeOneDomainServiceImpl();
+
+    @Test
+    void edgeOneSecurityPolicyRequestIncludesSecurityConfig() {
+        SecurityPolicy policy = new SecurityPolicy();
+        CustomRules customRules = new CustomRules();
+        customRules.setRules(new CustomRule[0]);
+        policy.setCustomRules(customRules);
+
+        ModifySecurityPolicyRequest request = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildModifySecurityPolicyRequest",
+                "zone-test",
+                "static.example.com",
+                policy
+        );
+
+        assertNotNull(request);
+        assertNotNull(request.getSecurityConfig());
+        assertNotNull(request.getSecurityPolicy());
+        HashMap<String, String> parameters = new HashMap<>();
+        request.toMap(parameters, "");
+        assertEquals("off", parameters.get("SecurityConfig.AclConfig.Switch"));
+    }
+
+    @Test
+    void unchangedEdgeOneSecurityPolicyModulesAreSkipped() {
+        ManagedRuleAutoUpdate autoUpdate = new ManagedRuleAutoUpdate();
+        autoUpdate.setAutoUpdateToLatestVersion("off");
+        ManagedRules managedRules = new ManagedRules();
+        managedRules.setEnabled("on");
+        managedRules.setDetectionOnly("on");
+        managedRules.setSemanticAnalysis("off");
+        managedRules.setAutoUpdate(autoUpdate);
+
+        BotManagement botManagement = new BotManagement();
+        botManagement.setEnabled("off");
+        CAPTCHAPageChallenge captcha = new CAPTCHAPageChallenge();
+        captcha.setEnabled("off");
+        AICrawlerDetection aiCrawler = new AICrawlerDetection();
+        aiCrawler.setEnabled("off");
+        SecurityAction monitor = new SecurityAction();
+        monitor.setName("Monitor");
+        aiCrawler.setAction(monitor);
+        BotManagementLite botLite = new BotManagementLite();
+        botLite.setCAPTCHAPageChallenge(captcha);
+        botLite.setAICrawlerDetection(aiCrawler);
+
+        AdaptiveFrequencyControl adaptive = new AdaptiveFrequencyControl();
+        adaptive.setEnabled("on");
+        adaptive.setSensitivity("low");
+        ClientFiltering clientFiltering = new ClientFiltering();
+        clientFiltering.setEnabled("on");
+        BandwidthAbuseDefense bandwidth = new BandwidthAbuseDefense();
+        bandwidth.setEnabled("off");
+        SlowAttackDefense slowAttack = new SlowAttackDefense();
+        slowAttack.setEnabled("on");
+        HttpDDoSProtection httpDdos = new HttpDDoSProtection();
+        httpDdos.setAdaptiveFrequencyControl(adaptive);
+        httpDdos.setClientFiltering(clientFiltering);
+        httpDdos.setBandwidthAbuseDefense(bandwidth);
+        httpDdos.setSlowAttackDefense(slowAttack);
+
+        EdgeOneSecurityPolicyVo config = EdgeOneSecurityPolicyVo.builder()
+                .managedRulesEnabled("on")
+                .managedRulesDetectionOnly("on")
+                .managedRulesSemanticAnalysis("off")
+                .managedRulesAutoUpdate("off")
+                .botManagementEnabled("off")
+                .captchaPageChallengeEnabled("off")
+                .aiCrawlerDetectionEnabled("off")
+                .aiCrawlerDetectionAction("Monitor")
+                .httpDdosAdaptiveFrequencyControlEnabled("on")
+                .httpDdosAdaptiveFrequencyControlSensitivity("low")
+                .httpDdosClientFilteringEnabled("on")
+                .httpDdosBandwidthAbuseDefenseEnabled("off")
+                .httpDdosSlowAttackDefenseEnabled("on")
+                .rateLimitEnabled("off")
+                .exceptionEnabled("off")
+                .build();
+
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(service,
+                "shouldSubmitManagedRules", managedRules, config));
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(service,
+                "shouldSubmitBotManagement", botManagement, config));
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(service,
+                "shouldSubmitBotManagementLite", botLite, config));
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(service,
+                "shouldSubmitHttpDdosProtection", httpDdos, config));
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(service,
+                "shouldSubmitRateLimitingRules", null, config, "static.example.com"));
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(service,
+                "shouldSubmitExceptionRules", null, config));
+    }
+
+    @Test
+    void explicitChangedModulesPreventUnchangedUnsupportedModuleSubmission() {
+        EdgeOneSecurityPolicyVo unchanged = EdgeOneSecurityPolicyVo.builder()
+                .changedModules(Collections.emptyList())
+                .build();
+        EdgeOneSecurityPolicyVo managedRulesOnly = EdgeOneSecurityPolicyVo.builder()
+                .changedModules(Collections.singletonList("managed-rules"))
+                .build();
+        EdgeOneSecurityPolicyVo legacyClient = EdgeOneSecurityPolicyVo.builder().build();
+
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(
+                service,
+                "shouldSubmitSecurityModule",
+                unchanged,
+                "http-ddos-protection",
+                true
+        ));
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(
+                service,
+                "shouldSubmitSecurityModule",
+                managedRulesOnly,
+                "http-ddos-protection",
+                true
+        ));
+        assertTrue((Boolean) ReflectionTestUtils.invokeMethod(
+                service,
+                "shouldSubmitSecurityModule",
+                managedRulesOnly,
+                "managed-rules",
+                false
+        ));
+        assertTrue((Boolean) ReflectionTestUtils.invokeMethod(
+                service,
+                "shouldSubmitSecurityModule",
+                legacyClient,
+                "http-ddos-protection",
+                true
+        ));
+    }
+
+    @Test
+    void managedRulesSubmissionDropsOutputOnlyFields() {
+        ManagedRuleAutoUpdate currentAutoUpdate = new ManagedRuleAutoUpdate();
+        currentAutoUpdate.setAutoUpdateToLatestVersion("on");
+        currentAutoUpdate.setRulesetVersion("2026-07-14T00:00:00Z");
+        ManagedRuleGroup currentGroup = new ManagedRuleGroup();
+        currentGroup.setGroupId("group-test");
+        currentGroup.setSensitivityLevel("normal");
+        currentGroup.setMetaData(new ManagedRuleGroupMeta());
+        ManagedRules current = new ManagedRules();
+        current.setAutoUpdate(currentAutoUpdate);
+        current.setManagedRuleGroups(new ManagedRuleGroup[]{currentGroup});
+
+        ManagedRules submitted = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildManagedRules",
+                current,
+                EdgeOneSecurityPolicyVo.builder()
+                        .managedRulesEnabled("on")
+                        .managedRulesDetectionOnly("on")
+                        .managedRulesSemanticAnalysis("off")
+                        .managedRulesAutoUpdate("on")
+                        .build()
+        );
+
+        assertNotNull(submitted);
+        assertNotSame(current, submitted);
+        assertNotNull(submitted.getAutoUpdate());
+        assertNull(submitted.getAutoUpdate().getRulesetVersion());
+        assertNotNull(submitted.getManagedRuleGroups());
+        assertEquals(1, submitted.getManagedRuleGroups().length);
+        assertNull(submitted.getManagedRuleGroups()[0].getMetaData());
+        assertNotNull(current.getManagedRuleGroups()[0].getMetaData());
+        String json = ManagedRules.toJsonString(submitted);
+        assertFalse(json.contains("RulesetVersion"));
+        assertFalse(json.contains("MetaData"));
+    }
+
+    @Test
+    void httpDdosSubmissionDropsOutputOnlyRuleIds() {
+        AdaptiveFrequencyControl adaptive = new AdaptiveFrequencyControl();
+        adaptive.setId("adaptive-output-id");
+        adaptive.setEnabled("on");
+        adaptive.setSensitivity("low");
+        ClientFiltering clientFiltering = new ClientFiltering();
+        clientFiltering.setId("client-output-id");
+        clientFiltering.setEnabled("on");
+        BandwidthAbuseDefense bandwidth = new BandwidthAbuseDefense();
+        bandwidth.setId("bandwidth-output-id");
+        bandwidth.setEnabled("off");
+        SlowAttackDefense slowAttack = new SlowAttackDefense();
+        slowAttack.setId("slow-output-id");
+        slowAttack.setEnabled("on");
+        MinimalRequestBodyTransferRate transferRate = new MinimalRequestBodyTransferRate();
+        transferRate.setEnabled("on");
+        transferRate.setMinimalAvgTransferRateThreshold("10");
+        transferRate.setCountingPeriod("30s");
+        slowAttack.setMinimalRequestBodyTransferRate(transferRate);
+        RequestBodyTransferTimeout timeout = new RequestBodyTransferTimeout();
+        timeout.setEnabled("on");
+        timeout.setIdleTimeout("30s");
+        slowAttack.setRequestBodyTransferTimeout(timeout);
+        HttpDDoSProtection current = new HttpDDoSProtection();
+        current.setAdaptiveFrequencyControl(adaptive);
+        current.setClientFiltering(clientFiltering);
+        current.setBandwidthAbuseDefense(bandwidth);
+        current.setSlowAttackDefense(slowAttack);
+
+        HttpDDoSProtection submitted = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildHttpDDoSProtection",
+                current,
+                EdgeOneSecurityPolicyVo.builder()
+                        .httpDdosAdaptiveFrequencyControlEnabled("on")
+                        .httpDdosAdaptiveFrequencyControlSensitivity("low")
+                        .httpDdosClientFilteringEnabled("on")
+                        .httpDdosBandwidthAbuseDefenseEnabled("off")
+                        .httpDdosSlowAttackDefenseEnabled("on")
+                        .build()
+        );
+
+        assertNotNull(submitted);
+        assertNotSame(current, submitted);
+        assertNull(submitted.getAdaptiveFrequencyControl().getId());
+        assertNull(submitted.getClientFiltering().getId());
+        assertNull(submitted.getBandwidthAbuseDefense().getId());
+        assertNull(submitted.getSlowAttackDefense().getId());
+        assertEquals("adaptive-output-id", current.getAdaptiveFrequencyControl().getId());
+        String json = HttpDDoSProtection.toJsonString(submitted);
+        assertFalse(json.contains("output-id"));
+    }
+
+    @Test
+    void singleModuleSecurityPolicyRequestStaysSmallAndIsolated() {
+        ManagedRules managedRules = new ManagedRules();
+        managedRules.setEnabled("on");
+        SecurityPolicy policy = new SecurityPolicy();
+        policy.setManagedRules(managedRules);
+
+        ModifySecurityPolicyRequest request = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildModifySecurityPolicyRequest",
+                "zone-test",
+                "static.example.com",
+                policy
+        );
+
+        assertNotNull(request);
+        String json = ModifySecurityPolicyRequest.toJsonString(request);
+        assertTrue(json.contains("ManagedRules"));
+        assertFalse(json.contains("BotManagement"));
+        assertFalse(json.contains("HttpDDoSProtection"));
+        assertFalse(json.contains("RateLimitingRules"));
+        assertFalse(json.contains("ExceptionRules"));
+        assertTrue(json.getBytes(StandardCharsets.UTF_8).length < 4096);
+    }
+
+    @Test
+    void edgeOneCustomAccessRuleRequestIncludesSecurityConfig() {
+        SecurityPolicy policy = new SecurityPolicy();
+        policy.setCustomRules(new CustomRules());
+
+        ModifySecurityPolicyRequest request = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildModifyZoneDefaultSecurityPolicyRequest",
+                "zone-test",
+                policy
+        );
+
+        assertNotNull(request);
+        assertNotNull(request.getSecurityConfig());
+        HashMap<String, String> parameters = new HashMap<>();
+        request.toMap(parameters, "");
+        assertEquals("off", parameters.get("SecurityConfig.AclConfig.Switch"));
+        assertEquals("ZoneDefaultPolicy", parameters.get("Entity"));
+    }
+
+    @Test
+    void edgeOneManagedRulesUseSupportedZoneDefaultPolicyRequest() {
+        ManagedRules managedRules = new ManagedRules();
+        managedRules.setEnabled("on");
+        SecurityPolicy policy = new SecurityPolicy();
+        policy.setManagedRules(managedRules);
+
+        ModifySecurityPolicyRequest request = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildModifyZoneDefaultSecurityPolicyRequest",
+                "zone-test",
+                policy
+        );
+
+        assertNotNull(request);
+        assertEquals("ZoneDefaultPolicy", request.getEntity());
+        assertNull(request.getHost());
+        assertNotNull(request.getSecurityConfig());
+        HashMap<String, String> parameters = new HashMap<>();
+        request.toMap(parameters, "");
+        assertEquals("off", parameters.get("SecurityConfig.WafConfig.Switch"));
+        assertEquals("on", parameters.get("SecurityPolicy.ManagedRules.Enabled"));
+    }
+
+    @Test
+    void edgeOneRefererRuleUsesPreciseMatchWithoutDenyParameters() {
+        CustomRule rule = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildDenyRule",
+                "kuocai_referer",
+                "${http.request.headers['referer']} like ['*example.com*']",
+                10L
+        );
+
+        assertNotNull(rule);
+        assertEquals("PreciseMatchRule", rule.getRuleType());
+        assertEquals(10L, rule.getPriority());
+        assertNotNull(rule.getAction());
+        assertEquals("Deny", rule.getAction().getName());
+        assertNull(rule.getAction().getDenyActionParameters());
+    }
+
+    @Test
+    void edgeOneRefererWhitelistUsesSupportedLogicalNot() {
+        String denyEmpty = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildRefererCondition",
+                2,
+                Collections.singletonList("*.baidu.com"),
+                false
+        );
+        String allowEmpty = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildRefererCondition",
+                2,
+                Collections.singletonList("*.baidu.com"),
+                true
+        );
+
+        assertNotNull(denyEmpty);
+        assertFalse(denyEmpty.startsWith("not ("));
+        assertTrue(denyEmpty.contains("not ${http.request.headers['referer']} like ['*.baidu.com']"));
+        assertTrue(denyEmpty.contains("not ${http.request.headers['referer']} exists"));
+        assertNotNull(allowEmpty);
+        assertFalse(allowEmpty.startsWith("not ("));
+        assertTrue(allowEmpty.contains("${http.request.headers['referer']} exists"));
+        assertTrue(allowEmpty.contains("not ${http.request.headers['referer']} like ['*.baidu.com']"));
+        assertFalse(allowEmpty.contains("not ${http.request.headers['referer']} exists"));
+    }
+
+    @Test
+    void edgeOneRefererWhitelistCanBeReadBackWithEmptyRefererSetting() {
+        String condition = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildRefererCondition",
+                2,
+                Collections.singletonList("*.baidu.com"),
+                true
+        );
+        CustomRule rule = new CustomRule();
+        rule.setName("kuocai_referer");
+        rule.setEnabled("on");
+        rule.setCondition(condition);
+        DomainVisitInfo visitInfo = new DomainVisitInfo();
+
+        ReflectionTestUtils.invokeMethod(service, "applyKuocaiRuleToVisitInfo", rule, visitInfo);
+
+        assertNotNull(visitInfo.getReferer());
+        assertEquals(2, visitInfo.getReferer().getReferer_type());
+        assertEquals("white", visitInfo.getReferer().getType());
+        assertTrue(visitInfo.getReferer().getInclude_empty());
+        assertEquals("*.baidu.com", visitInfo.getReferer().getValue());
+    }
+
+    @Test
+    void edgeOneIpRuleUsesBasicAccessWithoutPriority() {
+        CustomRule rule = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildBasicDenyRule",
+                "kuocai_ip_acl",
+                "${http.request.ip} in ['192.0.2.10']"
+        );
+
+        assertNotNull(rule);
+        assertEquals("BasicAccessRule", rule.getRuleType());
+        assertNull(rule.getPriority());
+        assertNull(rule.getAction().getDenyActionParameters());
+    }
+
+    @Test
+    void outputOnlyManagedAccessRuleIsNotSubmittedAgain() {
+        CustomRule managedRule = new CustomRule();
+        managedRule.setRuleType("ManagedAccessRule");
+        managedRule.setName("managed-rule");
+
+        CustomRule copied = ReflectionTestUtils.invokeMethod(
+                service,
+                "copyCustomRuleForSubmit",
+                managedRule
+        );
+
+        assertNull(copied);
+    }
+
+    @Test
+    void copiedDenyRuleDropsLegacyResponseCode() {
+        DenyActionParameters denyParameters = new DenyActionParameters();
+        denyParameters.setResponseCode("403");
+        SecurityAction action = new SecurityAction();
+        action.setName("Deny");
+        action.setDenyActionParameters(denyParameters);
+        CustomRule existing = new CustomRule();
+        existing.setName("existing-rule");
+        existing.setCondition("${http.request.ip} in ['192.0.2.20']");
+        existing.setEnabled("on");
+        existing.setRuleType("PreciseMatchRule");
+        existing.setPriority(20L);
+        existing.setAction(action);
+
+        CustomRule copied = ReflectionTestUtils.invokeMethod(
+                service,
+                "copyCustomRuleForSubmit",
+                existing
+        );
+
+        assertNotNull(copied);
+        assertNotNull(copied.getAction());
+        assertEquals("Deny", copied.getAction().getName());
+        assertNull(copied.getAction().getDenyActionParameters());
+    }
+
+    @Test
+    void edgeOneResourceTagConcurrentCommitCanBeRetriedWithoutBlockingConfiguration() {
+        Boolean concurrentCommit = ReflectionTestUtils.invokeMethod(
+                TencentEdgeOneClient.class,
+                "isResourceTagConcurrentCommit",
+                "repeat commit: lock:resourceTag:qcs::teo::uin/100000000000:zone/zone-test"
+        );
+        Boolean unrelatedError = ReflectionTestUtils.invokeMethod(
+                TencentEdgeOneClient.class,
+                "isResourceTagConcurrentCommit",
+                "InvalidParameter: tag value is invalid"
+        );
+
+        assertNotNull(concurrentCommit);
+        assertTrue(concurrentCommit);
+        assertNotNull(unrelatedError);
+        assertFalse(unrelatedError);
+    }
+
+    @Test
+    void edgeOneIpv6CanBeEnabledAndDisabledPerDomain() {
+        ModifyAccelerationDomainRequest enableRequest = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildModifyIpv6Request",
+                "zone-test",
+                "static.example.com",
+                1
+        );
+        ModifyAccelerationDomainRequest disableRequest = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildModifyIpv6Request",
+                "zone-test",
+                "static.example.com",
+                0
+        );
+
+        assertNotNull(enableRequest);
+        assertEquals("on", enableRequest.getIPv6Status());
+        assertEquals("zone-test", enableRequest.getZoneId());
+        assertEquals("static.example.com", enableRequest.getDomainName());
+        assertNotNull(disableRequest);
+        assertEquals("off", disableRequest.getIPv6Status());
+    }
+
+    @Test
+    void edgeOneIpv6FollowStatusUsesSiteConfigurationForDisplay() {
+        ZoneConfig enabledSiteConfig = new ZoneConfig();
+        IPv6Parameters ipv6 = new IPv6Parameters();
+        ipv6.setSwitch("on");
+        enabledSiteConfig.setIPv6(ipv6);
+
+        String enabled = ReflectionTestUtils.invokeMethod(
+                service,
+                "resolveSystemIpv6Status",
+                "follow",
+                enabledSiteConfig
+        );
+        String explicitlyDisabled = ReflectionTestUtils.invokeMethod(
+                service,
+                "resolveSystemIpv6Status",
+                "off",
+                enabledSiteConfig
+        );
+
+        assertEquals("1", enabled);
+        assertEquals("0", explicitlyDisabled);
+    }
+
+    @Test
+    void edgeOneCreateBuildsLocalPendingRecordBeforeCallingUpstream() {
+        CdnDomain pending = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildPendingCreateDomain",
+                null,
+                1001L,
+                "static.example.com",
+                "download",
+                "outside_mainland_china",
+                "zone-test"
+        );
+
+        assertNotNull(pending);
+        assertEquals(1001L, pending.getUserId());
+        assertEquals("static.example.com", pending.getDomainName());
+        assertEquals("zone-test", pending.getDomainId());
+        assertEquals("configuring", pending.getDomainStatus());
+        assertEquals("tencent_edgeone", pending.getRoute());
+        assertNotNull(pending.getCreateTime());
+        assertNotNull(pending.getUpdateTime());
+    }
+
+    @Test
+    void edgeOneOrphanRecoveryRequiresMatchingUpstreamOrigin() {
+        OriginDetail origin = new OriginDetail();
+        origin.setOriginType("IP_DOMAIN");
+        origin.setOrigin("192.0.2.10");
+        AccelerationDomain upstream = new AccelerationDomain();
+        upstream.setOriginDetail(origin);
+
+        Boolean matched = ReflectionTestUtils.invokeMethod(
+                service,
+                "isRequestedOriginMatched",
+                upstream,
+                "ipaddr",
+                "192.0.2.10"
+        );
+        Boolean mismatched = ReflectionTestUtils.invokeMethod(
+                service,
+                "isRequestedOriginMatched",
+                upstream,
+                "ipaddr",
+                "192.0.2.11"
+        );
+
+        assertNotNull(matched);
+        assertTrue(matched);
+        assertNotNull(mismatched);
+        assertFalse(mismatched);
+    }
+
+    @Test
+    void edgeOneOriginInfoIncludesConfiguredHostHeader() {
+        OriginInfo originInfo = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildOriginInfo",
+                "domain",
+                "cc.shejiaodj.com",
+                null,
+                "super.huwfdv.cn"
+        );
+
+        assertNotNull(originInfo);
+        assertEquals("IP_DOMAIN", originInfo.getOriginType());
+        assertEquals("cc.shejiaodj.com", originInfo.getOrigin());
+        assertEquals("super.huwfdv.cn", originInfo.getHostHeader());
+    }
+
+    @Test
+    void edgeOneOriginHostChangeIsNotTreatedAsUnchangedConfig() {
+        OriginDetail current = new OriginDetail();
+        current.setOriginType("IP_DOMAIN");
+        current.setOrigin("cc.shejiaodj.com");
+        current.setHostHeader("old.example.com");
+
+        Boolean unchanged = ReflectionTestUtils.invokeMethod(
+                service,
+                "isSameOriginConfig",
+                current,
+                "IP_DOMAIN",
+                "cc.shejiaodj.com",
+                "",
+                "old.example.com"
+        );
+        Boolean hostChanged = ReflectionTestUtils.invokeMethod(
+                service,
+                "isSameOriginConfig",
+                current,
+                "IP_DOMAIN",
+                "cc.shejiaodj.com",
+                "",
+                "super.huwfdv.cn"
+        );
+
+        assertNotNull(unchanged);
+        assertTrue(unchanged);
+        assertNotNull(hostChanged);
+        assertFalse(hostChanged);
+    }
+
+    @Test
+    void edgeOneModifyOriginRequestUsesStoredZoneAndIncludesHostProtocolAndPorts() {
+        OriginInfo originInfo = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildOriginInfo",
+                "domain",
+                "cc.shejiaodj.com",
+                null,
+                "new-host.example.com"
+        );
+
+        ModifyAccelerationDomainRequest request = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildModifyOriginRequest",
+                "zone-stored",
+                "static.example.com",
+                originInfo,
+                "follow",
+                8080,
+                8443
+        );
+
+        assertNotNull(request);
+        assertEquals("zone-stored", request.getZoneId());
+        assertEquals("static.example.com", request.getDomainName());
+        assertNotNull(request.getOriginInfo());
+        assertEquals("IP_DOMAIN", request.getOriginInfo().getOriginType());
+        assertEquals("cc.shejiaodj.com", request.getOriginInfo().getOrigin());
+        assertEquals("new-host.example.com", request.getOriginInfo().getHostHeader());
+        assertEquals("FOLLOW", request.getOriginProtocol());
+        assertEquals(8080L, request.getHttpOriginPort());
+        assertEquals(8443L, request.getHttpsOriginPort());
+    }
+
+    @Test
+    void edgeOneOriginGroupHostAndRecordsAreUsedForDisplay() {
+        OriginDetail origin = new OriginDetail();
+        origin.setOriginType("ORIGIN_GROUP");
+        origin.setOrigin("origin-main");
+        origin.setHostHeader("old-host.example.com");
+        OriginRecord first = new OriginRecord();
+        first.setRecord("192.0.2.10");
+        first.setType("IP_DOMAIN");
+        OriginRecord second = new OriginRecord();
+        second.setRecord("origin.example.com");
+        second.setType("IP_DOMAIN");
+        OriginGroup group = new OriginGroup();
+        group.setGroupId("origin-main");
+        group.setHostHeader("new-host.example.com");
+        group.setRecords(new OriginRecord[]{first, second});
+
+        String host = ReflectionTestUtils.invokeMethod(
+                service, "resolveOriginHostHeader", origin, group, "static.example.com");
+        String records = ReflectionTestUtils.invokeMethod(service, "joinOriginRecords", group);
+        String recordType = ReflectionTestUtils.invokeMethod(service, "firstOriginRecordType", group);
+
+        assertEquals("new-host.example.com", host);
+        assertEquals("192.0.2.10;origin.example.com", records);
+        assertEquals("IP_DOMAIN", recordType);
+    }
+
+    @Test
+    void edgeOneDirectOriginReadbackRequiresTheRequestedHostAndTransport() {
+        OriginDetail origin = new OriginDetail();
+        origin.setOriginType("IP_DOMAIN");
+        origin.setOrigin("cc.shejiaodj.com");
+        origin.setHostHeader("new-host.example.com");
+        AccelerationDomain current = new AccelerationDomain();
+        current.setOriginDetail(origin);
+        current.setOriginProtocol("FOLLOW");
+        current.setHttpOriginPort(8080L);
+        current.setHttpsOriginPort(8443L);
+
+        Boolean applied = ReflectionTestUtils.invokeMethod(
+                service,
+                "isSameDirectOriginConfig",
+                current,
+                "static.example.com",
+                "IP_DOMAIN",
+                "cc.shejiaodj.com",
+                "",
+                "new-host.example.com",
+                "follow",
+                8080,
+                8443
+        );
+        Boolean staleHost = ReflectionTestUtils.invokeMethod(
+                service,
+                "isSameDirectOriginConfig",
+                current,
+                "static.example.com",
+                "IP_DOMAIN",
+                "cc.shejiaodj.com",
+                "",
+                "another-host.example.com",
+                "follow",
+                8080,
+                8443
+        );
+
+        assertNotNull(applied);
+        assertTrue(applied);
+        assertNotNull(staleHost);
+        assertFalse(staleHost);
+    }
+
+    @Test
+    void edgeOneCacheRuleUsesFileExtensionListWithoutDotOrRegexMatches() {
+        RuleEngineItem item = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildCacheRuleEngineItem",
+                "static.example.com",
+                Arrays.asList(CacheRuleDTO.builder()
+                        .match_type("file_extension")
+                        .match_value("ipa,apk,zip")
+                        .ttl(15)
+                        .ttl_unit("d")
+                        .follow_origin("off")
+                        .build())
+        );
+
+        assertNotNull(item);
+        String json = RuleEngineItem.toJsonString(item);
+        assertTrue(json.contains("${http.request.file_extension} in ['ipa', 'apk', 'zip']"));
+        assertTrue(json.contains("\"CustomTime\""));
+        assertTrue(json.contains("\"CacheTime\":1296000"));
+        assertFalse(json.contains("matches"));
+        assertFalse(json.contains(".ipa"));
+    }
+
+    @Test
+    void edgeOneCatalogCacheRuleUsesSiteAccelerationMatchesExpression() {
+        RuleEngineItem item = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildCacheRuleEngineItem",
+                "static.example.com",
+                Arrays.asList(CacheRuleDTO.builder()
+                        .match_type("catalog")
+                        .match_value("/download")
+                        .ttl(1)
+                        .ttl_unit("h")
+                        .follow_origin("off")
+                        .build())
+        );
+
+        assertNotNull(item);
+        String condition = item.getBranches()[0].getSubRules()[0].getBranches()[0].getCondition();
+        assertEquals("${http.request.uri.path} matches '^/download(/.*)?$'", condition);
+        assertFalse(condition.contains(" like "));
+    }
+
+    @Test
+    void edgeOneFullPathWildcardCacheRuleUsesMatchesExpression() {
+        RuleEngineItem item = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildCacheRuleEngineItem",
+                "static.example.com",
+                Arrays.asList(CacheRuleDTO.builder()
+                        .match_type("full_path")
+                        .match_value("/download/*.zip")
+                        .ttl(1)
+                        .ttl_unit("h")
+                        .follow_origin("off")
+                        .build())
+        );
+
+        String condition = item.getBranches()[0].getSubRules()[0].getBranches()[0].getCondition();
+        assertEquals("${http.request.uri.path} matches '^/download/.*\\\\.zip$'", condition);
+        assertFalse(condition.contains(" like "));
+    }
+
+    @Test
+    void edgeOneActiveStatusIsConfigurable() {
+        Boolean busy = ReflectionTestUtils.invokeMethod(service, "isDomainBusy", "active");
+
+        assertNotNull(busy);
+        assertFalse(busy);
+    }
+
+    @Test
+    void unchangedGlobalCacheRuleCanBeSkipped() {
+        CacheConfigParameters currentCache = new CacheConfigParameters();
+        CacheConfigCustomTime customTime = new CacheConfigCustomTime();
+        customTime.setSwitch("on");
+        customTime.setCacheTime(30L * 24 * 60 * 60);
+        currentCache.setCustomTime(customTime);
+        NoCache noCache = new NoCache();
+        noCache.setSwitch("off");
+        currentCache.setNoCache(noCache);
+
+        Boolean same = ReflectionTestUtils.invokeMethod(
+                service,
+                "isSameGlobalCacheConfig",
+                currentCache,
+                CacheRuleDTO.builder()
+                        .match_type("all")
+                        .ttl(30)
+                        .ttl_unit("d")
+                        .follow_origin("off")
+                        .build()
+        );
+
+        assertNotNull(same);
+        assertTrue(same);
+    }
+
+    @Test
+    void edgeOneUrlAuthRuleUsesAuthenticationAction() {
+        RuleEngineItem item = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildUrlAuthRule",
+                "static.example.com",
+                UrlAuthDTO.builder()
+                        .status("on")
+                        .type("typeB")
+                        .primary_key("abcdef123456")
+                        .secondary_key("backup123456")
+                        .expire_time(1800L)
+                        .build()
+        );
+
+        assertNotNull(item);
+        String json = RuleEngineItem.toJsonString(item);
+        assertTrue(json.contains("\"Name\":\"Authentication\""));
+        assertTrue(json.contains("\"AuthType\":\"TypeB\""));
+        assertTrue(json.contains("\"SecretKey\":\"abcdef123456\""));
+        assertTrue(json.contains("\"Timeout\":1800"));
+    }
+
+    @Test
+    void edgeOneIgnoreQueryStringUsesCacheKeyActionAndCanBeReadBack() {
+        IgnoreQueryStringDTO config = new IgnoreQueryStringDTO();
+        config.setEnable("on");
+        config.setType("allow");
+        config.setHashKeyArgs("name,age");
+
+        RuleEngineItem item = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildIgnoreQueryStringRule",
+                "static.example.com",
+                config
+        );
+
+        assertNotNull(item);
+        String json = RuleEngineItem.toJsonString(item);
+        assertTrue(json.contains("\"Name\":\"CacheKey\""));
+        assertTrue(json.contains("\"FullURLCache\":\"off\""));
+        assertTrue(json.contains("\"Action\":\"includeCustom\""));
+        assertTrue(json.contains("\"Values\":[\"name\",\"age\"]"));
+        assertTrue(json.contains("kuocai_cache_key_static_example_com"));
+
+        IgnoreQueryStringDTO readBack = ReflectionTestUtils.invokeMethod(
+                service,
+                "parseIgnoreQueryStringRule",
+                item
+        );
+        assertNotNull(readBack);
+        assertEquals("on", readBack.getEnable());
+        assertEquals("allow", readBack.getType());
+        assertEquals("name,age", readBack.getHashKeyArgs());
+    }
+
+    @Test
+    void edgeOneBlockedQueryParametersUseExcludeCustom() {
+        IgnoreQueryStringDTO config = new IgnoreQueryStringDTO();
+        config.setEnable("on");
+        config.setType("block");
+        config.setHashKeyArgs("token,debug");
+
+        RuleEngineItem item = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildIgnoreQueryStringRule",
+                "static.example.com",
+                config
+        );
+
+        assertNotNull(item);
+        assertTrue(RuleEngineItem.toJsonString(item).contains("\"Action\":\"excludeCustom\""));
+        IgnoreQueryStringDTO readBack = ReflectionTestUtils.invokeMethod(
+                service,
+                "parseIgnoreQueryStringRule",
+                item
+        );
+        assertNotNull(readBack);
+        assertEquals("block", readBack.getType());
+    }
+
+    @Test
+    void edgeOneStatusCodeCacheUsesRuleEngineActionAndCanBeReadBack() {
+        RuleEngineItem item = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildStatusCodeCacheRule",
+                "static.example.com",
+                Arrays.asList(
+                        ErrorCodeCacheDTO.builder().code(503).ttl(120).build(),
+                        ErrorCodeCacheDTO.builder().code(404).ttl(3600).build()
+                )
+        );
+
+        assertNotNull(item);
+        String json = RuleEngineItem.toJsonString(item);
+        assertTrue(json.contains("\"Name\":\"StatusCodeCache\""));
+        assertTrue(json.contains("\"StatusCode\":503"));
+        assertTrue(json.contains("\"CacheTime\":120"));
+        assertTrue(json.contains("kuocai_status_code_cache_static_example_com"));
+
+        List<DomainCacheInfo.ErrorCodeCache> readBack = ReflectionTestUtils.invokeMethod(
+                service,
+                "parseStatusCodeCacheRule",
+                item
+        );
+        assertNotNull(readBack);
+        assertEquals(2, readBack.size());
+        assertEquals(404, readBack.get(0).getCode());
+        assertEquals(3600, readBack.get(0).getTtl());
+        assertEquals(503, readBack.get(1).getCode());
+        assertEquals(120, readBack.get(1).getTtl());
+    }
+
+    @Test
+    void edgeOneErrorFormattingKeepsErrorCodeWhenMessageIsEmpty() {
+        TencentCloudSDKException error = new TencentCloudSDKException(
+                "",
+                "request-test",
+                "InvalidParameter"
+        );
+
+        assertEquals(
+                "InvalidParameter，RequestId：request-test",
+                TencentEdgeOneClient.formatTencentError(error)
+        );
+    }
+
+    @Test
+    void edgeOneModifyRuleDoesNotSubmitReadOnlyPriority() {
+        RuleEngineItem existing = new RuleEngineItem();
+        existing.setRuleId("rule-test");
+        existing.setRulePriority(9L);
+        RuleEngineItem desired = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildStatusCodeCacheRule",
+                "static.example.com",
+                Collections.singletonList(ErrorCodeCacheDTO.builder().code(404).ttl(300).build())
+        );
+
+        ModifyL7AccRuleRequest request = ReflectionTestUtils.invokeMethod(
+                service,
+                "buildModifyL7AccRuleRequest",
+                "zone-test",
+                existing,
+                desired
+        );
+
+        assertNotNull(request);
+        String json = ModifyL7AccRuleRequest.toJsonString(request);
+        assertTrue(json.contains("\"RuleId\":\"rule-test\""));
+        assertFalse(json.contains("RulePriority"));
+    }
+}
