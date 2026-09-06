@@ -19,7 +19,6 @@ import com.kuocai.cdn.dto.datatable.DataTableQuery;
 import com.kuocai.cdn.entity.CdnDomain;
 import com.kuocai.cdn.entity.SysUser;
 import com.kuocai.cdn.entity.SysUserAccount;
-import com.kuocai.cdn.entity.TransactionOrder;
 import com.kuocai.cdn.enumeration.domainmerage.CdnRoute;
 import com.kuocai.cdn.exception.BusinessException;
 import com.kuocai.cdn.exception.CdnHuaweiException;
@@ -27,7 +26,6 @@ import com.kuocai.cdn.service.base.BaseService;
 import com.kuocai.cdn.service.base.VoData;
 import com.kuocai.cdn.util.Assert;
 import com.kuocai.cdn.util.SupportedVendorUtils;
-import com.kuocai.cdn.util.AliyunIcpComplianceProbe;
 import com.kuocai.cdn.vo.CdnDomainVo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,12 +63,6 @@ public class CdnDomainService extends BaseService<CdnDomain> implements VoData<C
 
     @Resource
     private SysUserAccountService userAccountService;
-
-    @Resource
-    private TransactionOrderService transactionOrderService;
-
-    @Resource
-    private SelfHostedCdnService selfHostedCdnService;
 
     @Resource
     private CdnDomainRouteBindingService routeBindingService;
@@ -114,16 +106,10 @@ public class CdnDomainService extends BaseService<CdnDomain> implements VoData<C
         if (source.getUserId() != null) {
             row.put("userId", String.valueOf(source.getUserId()));
         }
-        boolean configurationRetryAllowed = CdnRoute.isSelfHosted(source.getRoute())
-                && "configure_failed".equals(source.getDomainStatus());
-        row.put("configurationRetryAllowed", configurationRetryAllowed);
-        boolean filingBlocked = AliyunIcpComplianceProbe.isBlockedReason(source.getFailureReason());
-        row.put("filingBlocked", filingBlocked);
-        if (filingBlocked) {
-            row.put("failureReason", AliyunIcpComplianceProbe.USER_MESSAGE);
-        } else if ("configure_failed".equals(source.getDomainStatus())
-                || Assert.notEmpty(source.getFailureReason())) {
-            row.put("failureReason", USER_DOMAIN_CONFIGURATION_FAILURE);
+        row.put("configurationRetryAllowed", false);
+        row.put("filingBlocked", false);
+        if (Assert.notEmpty(source.getFailureReason())) {
+            row.put("failureReason", source.getFailureReason());
         }
         USER_HIDDEN_PROVIDER_FIELDS.forEach(row::remove);
         return row;
@@ -476,30 +462,8 @@ public class CdnDomainService extends BaseService<CdnDomain> implements VoData<C
         return cdnDomainVos;
     }
 
-    /**
-     * 旧版 self_hosted 域名没有把线路拆成三种 route，展示区域必须以实际绑定的节点组为准。
-     */
     private String resolveServiceArea(CdnDomain domain) {
-        if (domain == null || !CdnRoute.SELF_HOSTED.getCode().equals(domain.getRoute())) {
-            return domain == null ? null : domain.getServiceArea();
-        }
-        try {
-            com.kuocai.cdn.entity.SelfHostedDomainConfig config =
-                    selfHostedCdnService.getDomainConfig(domain.getId());
-            com.kuocai.cdn.entity.SelfHostedNodeGroup group = selfHostedCdnService.listGroups().stream()
-                    .filter(item -> item.getId().equals(config.getNodeGroupId()))
-                    .findFirst().orElse(null);
-            if (group != null) {
-                String route = CdnRoute.selfHostedRouteForCoverage(group.getCoverage());
-                String actualServiceArea = CdnRoute.selfHostedServiceArea(route);
-                if (actualServiceArea != null) {
-                    return actualServiceArea;
-                }
-            }
-        } catch (Exception e) {
-            log.debug("解析旧版自建 CDN 域名服务区域失败，domainId={}", domain.getId(), e);
-        }
-        return domain.getServiceArea();
+        return domain == null ? null : domain.getServiceArea();
     }
     private void applyRouteInfo(CdnDomainVo target, CdnDomain domain) {
         if (CdnRoute.isMultiCdn(domain.getRoute())) {
@@ -532,11 +496,7 @@ public class CdnDomainService extends BaseService<CdnDomain> implements VoData<C
         if (Assert.isEmpty(sysUserAccount)) {
             return true;
         }
-        List<TransactionOrder> transactionOrders = transactionOrderService.queryFlowDeductionOrderType(userId);
-        if (sysUserAccount.getAccountBalance().compareTo(BigDecimal.ZERO) < 0 || Assert.notEmpty(transactionOrders)) {
-            return true;
-        }
-        return false;
+        return sysUserAccount.getAccountBalance().compareTo(BigDecimal.ZERO) < 0;
     }
 
     /**

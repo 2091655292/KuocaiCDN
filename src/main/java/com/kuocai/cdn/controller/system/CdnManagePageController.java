@@ -16,7 +16,6 @@ import com.kuocai.cdn.enumeration.domainmerage.cachesetting.RefreshUrlCount;
 import com.kuocai.cdn.service.CacheTaskService;
 import com.kuocai.cdn.service.CdnServiceAreaPolicyService;
 import com.kuocai.cdn.service.CdnAreaRouteService;
-import com.kuocai.cdn.service.SelfHostedCdnService;
 import com.kuocai.cdn.util.Assert;
 import com.kuocai.cdn.util.JedisUtil;
 import com.kuocai.cdn.vo.CdnDomainVo;
@@ -51,9 +50,6 @@ public class CdnManagePageController extends BaseController {
     private CacheTaskService cacheTaskService;
 
     @Resource
-    private SelfHostedCdnService selfHostedCdnService;
-
-    @Resource
     private CdnServiceAreaPolicyService cdnServiceAreaPolicyService;
 
     @Resource
@@ -67,12 +63,6 @@ public class CdnManagePageController extends BaseController {
             return adminDomainList(map);
         }
         return userDomainList(map);
-    }
-
-    @GetMapping("/self-hosted-port-forward")
-    public String selfHostedPortForward(Map<String, Object> map) {
-        map.put("isAdmin", isAdmin());
-        return "admin/domain/self-hosted-port-forward";
     }
 
     /**
@@ -210,16 +200,7 @@ public class CdnManagePageController extends BaseController {
     }
 
     String resolveDomainCreateRoute(String userRoute) {
-        if (!CdnRoute.SELF_HOSTED.getCode().equals(userRoute)) {
-            return userRoute;
-        }
-        try {
-            return CdnRoute.selfHostedRouteForCoverage(
-                    selfHostedCdnService.defaultGroup(userRoute).getCoverage());
-        } catch (Exception e) {
-            log.warn("无法按默认节点组解析旧版自建 CDN 线路：{}", e.getMessage());
-            return userRoute;
-        }
+        return userRoute;
     }
 
     /**

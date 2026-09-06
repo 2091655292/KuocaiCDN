@@ -2,9 +2,6 @@ package com.kuocai.cdn.service;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.kuocai.cdn.constant.TransactionOrderPayType;
-import com.kuocai.cdn.constant.TransactionOrderStatus;
-import com.kuocai.cdn.constant.TransactionOrderType;
 import com.kuocai.cdn.dao.SysUserAccountDao;
 import com.kuocai.cdn.dao.SysUserDao;
 import com.kuocai.cdn.entity.*;
@@ -39,9 +36,6 @@ public class SysUserAccountService extends BaseService<SysUserAccount> {
 
     @Resource
     private SysUserDao sysUserDao;
-
-    @Resource
-    private TransactionOrderService transactionOrderService;
 
     /**
      * description: 根据用户id获取用户账户
@@ -101,34 +95,19 @@ public class SysUserAccountService extends BaseService<SysUserAccount> {
             String payType = sysUserAccountVo.getPayType();
             String userName = StrUtil.cleanBlank(sysUserAccountVo.getUserName());
             SysUser user = sysUserDao.selectById(sysUserAccountVo.getUserId());
-            TransactionOrder transactionOrder = TransactionOrder.builder()
-                    // 此处不进行判null
-                    .orderType(payType)
-                    .orderNum(PayUtils.getOutTradeNo())
-                    .amount(rechargeAmount)
-                    .title("账户变动")
-                    .detail(TransactionOrderType.ADMIN_BALANCE_DEDUCTION.equals(payType) ? "人工扣款" : "人工充值")
-                    .createBy(sysUser.getId())
-                    .payType(TransactionOrderPayType.ARTIFICIAL_PAY)
-                    .userId(sysUserAccountVo.getUserId())
-                    .payTime(new Date())
-                    .status(TransactionOrderStatus.TRADE_SUCCESS)
-                    .userName(user.getUserName())
-                    .build();
-            transactionOrderService.save(transactionOrder);
-            SysUserAccount sysUserAccount = getSysUserAccountByUserId(transactionOrder.getUserId());
+            SysUserAccount sysUserAccount = getSysUserAccountByUserId(sysUserAccountVo.getUserId());
             sysUserAccount = Assert.isEmpty(sysUserAccount) ? new SysUserAccount() : sysUserAccount;
             // 扣款逻辑 TODO 注意，这里事务不具有强一致性，前端已经进行了扣款不能大于余额的判定(这里可以优化->抛出异常即可满足一致性)
-            if (TransactionOrderType.ADMIN_BALANCE_DEDUCTION.equals(payType) && sysUserAccount.getAccountBalance().compareTo(rechargeAmount) >= 0) {
+            if ("admin_balance_deduction".equals(payType) && sysUserAccount.getAccountBalance().compareTo(rechargeAmount) >= 0) {
                 sysUserAccount.reduceAccountBalance(rechargeAmount);
             }
             // 充值逻辑
-            if (TransactionOrderType.ADMIN_BALANCE_RECHARGE.equals(payType)) {
+            if ("admin_balance_recharge".equals(payType)) {
                 sysUserAccount.addAccountBalance(rechargeAmount);
                 sysUserAccount.addAmassRecharge(rechargeAmount);
             }
             sysUserAccount.setUserName(userName);
-            sysUserAccount.setUserId(transactionOrder.getUserId());
+            sysUserAccount.setUserId(sysUserAccountVo.getUserId());
             save(sysUserAccount);
         } catch (Exception e) {
             return false;

@@ -86,7 +86,7 @@ public class EdgeOneDomainQuotaService extends BaseService<EdgeOneDomainQuotaOrd
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void grantPaidQuota(TransactionOrder order) {
+    public void grantPaidQuota() {
         // Paid quota is intentionally unavailable in the open source edition.
     }
 

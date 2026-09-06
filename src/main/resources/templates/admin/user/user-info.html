@@ -322,17 +322,12 @@
 
                                 <!-- Custom File Cover -->
                                 <div class="profile-cover-content profile-cover-uploader p-3">
-                                    <a href="authentication-real-name"
-                                       class="profile-cover-uploader-label btn btn-sm btn-white">
-                                        <i class="bi-patch-check-fill text-secondary"
-                                           th:if="${session.loginUser.status == 'register_not_certified'}"></i>
+                                    <span class="profile-cover-uploader-label btn btn-sm btn-white">
                                         <i class="bi-patch-check-fill text-success"
                                            th:if="${session.loginUser.status == 'certified'}"></i>
                                         <span class="d-none d-sm-inline-block ms-1"
-                                              th:if="${session.loginUser.status == 'certified'}">已完成实名认证</span>
-                                        <span class="d-none d-sm-inline-block ms-1"
-                                              th:if="${session.loginUser.status == 'register_not_certified'}">未完成实名认证</span>
-                                    </a>
+                                              th:if="${session.loginUser.status == 'certified'}">已认证账户</span>
+                                    </span>
                                 </div>
                                 <!-- End Custom File Cover -->
                                 <!-- End Custom File Cover -->

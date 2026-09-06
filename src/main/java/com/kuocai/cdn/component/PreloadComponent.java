@@ -169,12 +169,6 @@ public class PreloadComponent {
         log.info("========== 加载邮箱配置 ==========");
         SystemConfig.emailTemplateConfig = sysConfigService.getConfigContentVo(EmailTemplateVo.class, ConfigBizTypeConstants.EMAIL_TEMPLATE_CONFIG);
         SystemConfig.emailConfig = sysConfigService.getConfigContentVo(EmailConfigVo.class, ConfigBizTypeConstants.EMAIL_CONFIG);
-        EmailClient.fromEmail = SystemConfig.emailConfig.getSenderMailbox();
-        EmailClient.fromTitle = SystemConfig.emailConfig.getSenderTitle();
-        EmailClient.userName = SystemConfig.emailConfig.getSenderMailbox();
-        EmailClient.password = SystemConfig.emailConfig.getAuthorizationPassword();
-        EmailClient.host = SystemConfig.emailConfig.getSmtpServer();
-        EmailClient.port = SystemConfig.emailConfig.getServerPort();
     }
 
     /**
@@ -184,8 +178,5 @@ public class PreloadComponent {
         log.info("========== 加载短信配置 ==========");
         SystemConfig.smsTemplateConfig = sysConfigService.getConfigContentVo(SmsTemplateVo.class, ConfigBizTypeConstants.SMS_TEMPLATE_CONFIG);
         SystemConfig.smsConfig = sysConfigService.getConfigContentVo(SmsConfigVo.class, ConfigBizTypeConstants.SMS_CONFIG);
-        SmsClient.smsAppId = SystemConfig.smsConfig.getSdkAppId();
-        SmsClient.smsAppKey = SystemConfig.smsConfig.getSecretKey();
-        SmsClient.smsSign = SystemConfig.smsConfig.getSmsSign();
     }
 }

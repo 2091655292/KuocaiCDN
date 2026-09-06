@@ -6,7 +6,6 @@ import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.kuocai.cdn.api.DomainBasicInfo;
 import com.kuocai.cdn.api.DomainConfig;
-import com.kuocai.cdn.async.SmsAsync;
 import com.kuocai.cdn.entity.CdnDomain;
 import com.kuocai.cdn.entity.SysUser;
 import com.kuocai.cdn.exception.BusinessException;
@@ -18,7 +17,6 @@ import com.kuocai.cdn.service.domain.operation.AliyunDomainServiceImpl;
 import com.kuocai.cdn.service.domain.operation.ICdnPlatformService;
 import com.kuocai.cdn.service.factory.CdnPlatformFactory;
 import com.kuocai.cdn.util.Assert;
-import com.kuocai.cdn.util.AliyunIcpComplianceProbe;
 import com.kuocai.cdn.util.DomainSyncFailureClassifier;
 import com.kuocai.cdn.util.EdgeOneFailureReasonFormatter;
 import com.kuocai.cdn.util.JedisUtil;
@@ -50,7 +48,6 @@ import java.util.stream.Collectors;
 public class DomainTask {
 
     private final AliyunDomainServiceImpl aliyunDomainService;
-    private final SmsAsync smsAsync;
     private final CdnDomainStatisticsService statisticsService;
     private final SysUserService sysUserService;
     private final Executor taskExecutor;
@@ -61,10 +58,9 @@ public class DomainTask {
     @Resource
     private EdgeOneDomainQuotaService edgeOneDomainQuotaService;
 
-    DomainTask(AliyunDomainServiceImpl aliyunDomainService, SmsAsync smsAsync, CdnDomainStatisticsService statisticsService,
+    DomainTask(AliyunDomainServiceImpl aliyunDomainService, CdnDomainStatisticsService statisticsService,
                SysUserService sysUserService, @Qualifier("cdnDomainExecutor") Executor taskExecutor) {
         this.aliyunDomainService = aliyunDomainService;
-        this.smsAsync = smsAsync;
         this.statisticsService = statisticsService;
         this.sysUserService = sysUserService;
         this.taskExecutor = taskExecutor;
@@ -332,9 +328,6 @@ public class DomainTask {
     public void notifyLongTimeNoUseDomain() {
         List<CdnDomain> cdnDomains = cdnDomainService.queryByObj(CdnDomain.builder().domainStatus("offline").build());
         for (CdnDomain cdnDomain : cdnDomains) {
-            if (AliyunIcpComplianceProbe.isBlockedReason(cdnDomain.getFailureReason())) {
-                continue;
-            }
             if (!KuocaiDateUtil.isOverDays(cdnDomain.getUpdateTime(), 6)) {
                 continue;
             }
@@ -349,8 +342,7 @@ public class DomainTask {
                 Date updateTime = cdnDomain.getUpdateTime();
                 Long userId = cdnDomain.getUserId();
                 String deleteTime = KuocaiDateUtil.addDaysToDate(updateTime, 7);
-                smsAsync.notifyLongTimeNoUseDomain(userId, domainName, deleteTime);
-                log.info("删除提醒成功，域名信息：{}", domainName);
+                log.info("检测到长期未使用域名：{}，计划删除时间：{}", domainName, deleteTime);
                 // 缓存一天时间
                 JedisUtil.setStr(cacheKey, "", 86400);
             } catch (Exception e) {
@@ -366,9 +358,6 @@ public class DomainTask {
     public void deleteLongTimeNoUseDomain() {
         List<CdnDomain> cdnDomains = cdnDomainService.queryByObj(CdnDomain.builder().domainStatus("offline").build());
         for (CdnDomain cdnDomain : cdnDomains) {
-            if (AliyunIcpComplianceProbe.isBlockedReason(cdnDomain.getFailureReason())) {
-                continue;
-            }
             if (!KuocaiDateUtil.isOverDays(cdnDomain.getUpdateTime(), 7)) {
                 continue;
             }

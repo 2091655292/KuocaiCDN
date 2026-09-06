@@ -59,13 +59,11 @@ public class SystemSettingsPageController extends BaseController {
         List<CdnServiceAreaOptionVo> options = new ArrayList<>();
         for (Map<String, String> vendor : SupportedVendorUtils.allVendorOptions()) {
             String route = vendor.get("code");
-            if (CdnRoute.MULTI_CDN.getCode().equals(route)
-                    || CdnRoute.SELF_HOSTED.getCode().equals(route)) {
+            if (CdnRoute.MULTI_CDN.getCode().equals(route)) {
                 continue;
             }
             String name = vendor.get("name");
-            String fixedArea = CdnRoute.selfHostedServiceArea(route);
-            options.add(option(config, route, name, fixedArea));
+            options.add(option(config, route, name, null));
         }
         return options;
     }
@@ -112,54 +110,6 @@ public class SystemSettingsPageController extends BaseController {
     }
 
     /**
-     * 实名配置
-     */
-    @AuthorLimiter
-    @GetMapping("real-name-setting")
-    public String realNameSetting(Map<String, Object> map) {
-        AlipayAuthenticationConfigVo aliPayConfig = sysConfigService.getConfigContentVo(AlipayAuthenticationConfigVo.class, ConfigBizTypeConstants.ALIPAY_AUTHENTICATION_CONFIG);
-        map.put("aliPayConfig", aliPayConfig);
-        return "admin/settings/real-name-setting";
-    }
-
-    /**
-     * 邮件配置
-     */
-    @AuthorLimiter
-    @GetMapping("email-setting")
-    public String emailSetting(Map<String, Object> map) {
-        EmailTemplateVo emailTemplateConfig = sysConfigService.getConfigContentVo(EmailTemplateVo.class, ConfigBizTypeConstants.EMAIL_TEMPLATE_CONFIG);
-        EmailConfigVo emailConfigVo = sysConfigService.getConfigContentVo(EmailConfigVo.class, ConfigBizTypeConstants.EMAIL_CONFIG);
-        map.put("emailTemplateConfig", emailTemplateConfig);
-        map.put("emailServiceConfig", emailConfigVo);
-        return "admin/settings/email-setting";
-    }
-
-    /**
-     * 短信配置
-     */
-    @AuthorLimiter
-    @GetMapping("sms-setting")
-    public String smsSetting(Map<String, Object> map) {
-        SmsTemplateVo smsTemplateConfig = sysConfigService.getConfigContentVo(SmsTemplateVo.class, ConfigBizTypeConstants.SMS_TEMPLATE_CONFIG);
-        SmsConfigVo smsConfigVo = sysConfigService.getConfigContentVo(SmsConfigVo.class, ConfigBizTypeConstants.SMS_CONFIG);
-        map.put("smsTemplateConfig", smsTemplateConfig);
-        map.put("smsServiceConfig", smsConfigVo);
-        return "admin/settings/sms-setting";
-    }
-
-    /**
-     * 快捷登录配置
-     */
-    @AuthorLimiter
-    @GetMapping("quick-login-setting")
-    public String quickLoginSetting(Map<String, Object> map) {
-        WeChatCodeConfigVo weChatCodeConfig = sysConfigService.getConfigContentVo(WeChatCodeConfigVo.class, ConfigBizTypeConstants.WECHAT_CODE_CONFIG);
-        map.put("weChatCodeConfig", weChatCodeConfig);
-        return "admin/settings/quick-login-setting";
-    }
-
-    /**
      * API 配置
      */
     @AuthorLimiter
@@ -201,11 +151,5 @@ public class SystemSettingsPageController extends BaseController {
         return "admin/settings/api-setting";
     }
 
-    @AuthorLimiter
-    @GetMapping("self-hosted-node")
-    public String selfHostedNode(Map<String, Object> map) {
-        map.put("selfHostedDnsDomain", TencentDns.LOCAL_DOMAIN_NAME);
-        return "admin/settings/self-hosted-node";
-    }
 
 }

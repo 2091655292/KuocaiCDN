@@ -5,9 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.kuocai.cdn.constant.KuoCaiConstants;
 import com.kuocai.cdn.controller.base.BaseController;
-import com.kuocai.cdn.entity.Announcement;
 import com.kuocai.cdn.entity.CdnDomain;
-import com.kuocai.cdn.entity.LoginDevice;
 import com.kuocai.cdn.exception.BusinessException;
 import com.kuocai.cdn.service.CdnDomainStatisticsService;
 import com.kuocai.cdn.util.Assert;
@@ -54,14 +52,8 @@ public class DashboardPageController extends BaseController {
     public String userDashboard(Map<String, Object> map) throws BusinessException {
         // 数量统计
         Map<String, Long> countStatistics = statisticsService.queryCountStatistics(loginUserId);
-        // 最新登录记录
-        List<LoginDevice> loginDevices = loginDeviceService.queryUserLastLoginDevice(loginUserId, 1);
-        // 获取最新公告
-        Announcement announcement = announcementService.getPublished();
 
-        map.put("announcement", announcement);
         map.put("countStatistics", countStatistics);
-        map.put("loginDevice", loginDevices.get(0));
         return "user/dashboard";
     }
 
@@ -99,7 +91,7 @@ public class DashboardPageController extends BaseController {
         // 获取用户总数
         Long userCount = sysUserService.countByWrapper(new QueryWrapper<>());
         // 获取工单总数
-        Long orderCount = workOrderService.countByWrapper(new QueryWrapper<>());
+        Long orderCount = 0L;
         // 获取总充值
         Map<String, BigDecimal> allAccountInfo = sysUserAccountService.getAllAccountInfo();
         // 获取总消费

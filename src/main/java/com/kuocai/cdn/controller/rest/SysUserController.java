@@ -430,12 +430,7 @@ public class SysUserController extends BaseController {
         sysUserAccountService.deleteByUserId(id);
         cdnDomainService.deleteByUserId(id);
         cacheTaskService.deleteByUserId(id);
-        loginDeviceService.deleteByUserId(id);
         operationLogService.deleteByUserId(id);
-        realNameAuthenticationService.deleteByUserId(id);
-        transactionOrderService.deleteByUserId(id);
-        workOrderService.deleteByUserId(id);
-        messageService.deleteByUserId(id);
         log.info("成功删除用户：{}", id);
         return RespResult.success("删除成功");
     }

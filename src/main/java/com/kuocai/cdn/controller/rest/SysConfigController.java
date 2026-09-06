@@ -4,7 +4,7 @@ import cn.hutool.core.date.DateUtil;
 import com.kuocai.cdn.annotation.AuthorLimiter;
 import com.kuocai.cdn.annotation.RateLimiter;
 import com.kuocai.cdn.annotation.SysLog;
-import com.kuocai.cdn.component.OssClient;
+import com.kuocai.cdn.component.LocalStorageClient;
 import com.kuocai.cdn.component.PreloadComponent;
 import com.kuocai.cdn.constant.ConfigBizTypeConstants;
 import com.kuocai.cdn.controller.base.BaseController;
@@ -50,7 +50,7 @@ public class SysConfigController extends BaseController {
     protected SysConfigService service;
 
     @Resource
-    private OssClient ossClient;
+    private LocalStorageClient ossClient;
 
     @Resource
     private PreloadComponent preloadComponent;

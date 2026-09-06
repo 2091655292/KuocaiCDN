@@ -6,7 +6,6 @@ import com.kuocai.cdn.api.huawei.cdn.constant.DomainStatus;
 import com.kuocai.cdn.controller.base.BaseController;
 import com.kuocai.cdn.dto.resp.RespResult;
 import com.kuocai.cdn.entity.CdnDomain;
-import com.kuocai.cdn.enumeration.domainmerage.CdnRoute;
 import com.kuocai.cdn.service.CdnDomainService;
 import com.kuocai.cdn.service.domain.operation.ICdnPlatformService;
 import com.kuocai.cdn.service.factory.CdnPlatformFactory;
@@ -94,44 +93,6 @@ public class CdnDomainHigherController extends BaseController {
         cdnDomain.setDomainStatus(DomainStatus.CONFIGURING);
         cdnDomainService.save(cdnDomain);
         return RespResult.success("配置正在部署中，大约需要5分钟的时间完成部署，请稍后。");
-    }
-
-    /**
-     * 保存智能压缩
-     *
-     * @return {@code RespResult}
-     */
-    @RateLimiter
-    @PostMapping("saveAttackProtection")
-    @SysLog(module = "站点管理", describe = "保存自建CDN单域名攻击熔断配置")
-    public RespResult saveAttackProtection(@RequestBody SettingHigherVo config) {
-        if (!isAdmin()) {
-            return RespResult.fail("仅管理员可以修改攻击熔断配置");
-        }
-        if (config == null || Assert.isEmpty(config.getDoMainId())
-                || config.getAttackProtection() == null) {
-            return RespResult.fail("参数错误");
-        }
-        CdnDomain cdnDomain = cdnDomainService.queryById(config.getDoMainId());
-        if (cdnDomain == null) {
-            return RespResult.fail("没有对应的加速域名");
-        }
-        if (!CdnRoute.isSelfHosted(cdnDomain.getRoute())) {
-            return RespResult.fail("仅自建 CDN 域名支持攻击熔断");
-        }
-        RespResult accessResult = checkDomainAccess(cdnDomain);
-        if (accessResult != null) {
-            return accessResult;
-        }
-        try {
-            ICdnPlatformService platform = CdnPlatformFactory.getCdnPlatform(cdnDomain.getRoute());
-            platform.saveAttackProtection(cdnDomain, config);
-        } catch (Exception e) {
-            return RespResult.fail(e.getMessage());
-        }
-        cdnDomain.setDomainStatus(DomainStatus.CONFIGURING);
-        cdnDomainService.save(cdnDomain);
-        return RespResult.success("攻击熔断配置正在下发");
     }
 
     @RateLimiter

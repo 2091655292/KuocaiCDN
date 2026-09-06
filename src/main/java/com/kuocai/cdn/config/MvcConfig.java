@@ -1,7 +1,6 @@
 package com.kuocai.cdn.config;
 
 import com.kuocai.cdn.component.DomainPermissionHandlerInterceptor;
-import com.kuocai.cdn.component.InstallationGuardInterceptor;
 import com.kuocai.cdn.component.LoginHandlerInterceptor;
 import org.springframework.boot.web.server.ErrorPage;
 import org.springframework.boot.web.server.ErrorPageRegistrar;
@@ -9,6 +8,7 @@ import org.springframework.boot.web.server.ErrorPageRegistry;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -25,14 +25,25 @@ public class MvcConfig implements WebMvcConfigurer, ErrorPageRegistrar {
 
     private final LoginHandlerInterceptor loginHandlerInterceptor;
 
-    private final InstallationGuardInterceptor installationGuardInterceptor;
-
     public MvcConfig(DomainPermissionHandlerInterceptor domainPermissionHandlerInterceptor,
-                     LoginHandlerInterceptor loginHandlerInterceptor,
-                     InstallationGuardInterceptor installationGuardInterceptor) {
+                     LoginHandlerInterceptor loginHandlerInterceptor) {
         this.domainPermissionHandlerInterceptor = domainPermissionHandlerInterceptor;
         this.loginHandlerInterceptor = loginHandlerInterceptor;
-        this.installationGuardInterceptor = installationGuardInterceptor;
+    }
+
+    /**
+     * 本地上传文件静态资源映射
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:" + uploadDirAbsPath() + "/");
+    }
+
+    private String uploadDirAbsPath() {
+        String dir = System.getProperty("app.upload-dir", "./uploads");
+        java.io.File file = new java.io.File(dir);
+        return file.getAbsolutePath();
     }
 
     /**
@@ -68,21 +79,17 @@ public class MvcConfig implements WebMvcConfigurer, ErrorPageRegistrar {
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(installationGuardInterceptor)
-                .addPathPatterns("/**")
-                .order(-1);
         registry.addInterceptor(loginHandlerInterceptor)
                 // 拦截的请求
                 .addPathPatterns("/**")
                 // 不拦截的请求（放行）
                 .excludePathPatterns(
-                        "/", "/health", "/index", "/product_price", "/contact", "/alipay-authentication-redirect",
-                        "/login/**", "/admin-login", "/user-login", "/register", "/register-email", "/forget", "/SysUser/registerUser", "/SysUser/registerUserByEmail", "/sign", "/MP_verify_uTqpCgnxTUMc708G.txt", "/robots.txt", "/getWechatQrCode", "/wechatBinding", "/wechatOpenIdLogin", "/kuocaiadmin",
-                        "/FaceCertifyVerify/i/**", "/api/**", "/internal/scdn/**",
+                        "/", "/health", "/index",
+                        "/login/**", "/admin-login", "/user-login", "/register", "/register-email", "/forget", "/SysUser/registerUser", "/SysUser/registerUserByEmail", "/sign", "/robots.txt",
+                        "/api/**",
                         "/400", "/401", "/403", "/404", "/500", "/banned",
-                        "/image/**", "/**/front/**", "/**/dashboard/assets/**", "/**/common/**")
+                        "/image/**", "/uploads/**", "/**/front/**", "/**/dashboard/assets/**", "/**/common/**")
                 .order(1);
-        // 注册支付拦截器
         // 权限拦截器
         registry.addInterceptor(domainPermissionHandlerInterceptor)
                 .addPathPatterns("/domain-setting-basic", "/domain-setting-origin", "/domain-setting-https", "/domain-setting-cache", "/domain-setting-access", "/domain-setting-higher")

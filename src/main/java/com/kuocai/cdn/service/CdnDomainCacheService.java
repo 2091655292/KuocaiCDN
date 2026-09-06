@@ -101,9 +101,6 @@ public class CdnDomainCacheService {
     private String purchaseTicketSingle(String prefix, List<String> urls, String taskType,
                                         String type, Long loginUserId, String route) throws CdnHuaweiException {
         try {
-            if (CdnRoute.isSelfHosted(route)) {
-                return submitSelfHostedCacheTask(urls, taskType, type, loginUserId, route);
-            }
             if (ObjectUtil.equal(route, CdnRoute.HUAWEI_VOLCENGINE.getCode())) {
                 return purchaseTicketHV(prefix, urls, taskType, type, loginUserId);
             } else {
@@ -136,24 +133,6 @@ public class CdnDomainCacheService {
             log.error("缓存配置失败->URLs:[{}],error:[{}]", urls, e.getMessage());
             return urls.stream().collect(Collectors.joining(","));
         }
-    }
-
-    private String submitSelfHostedCacheTask(List<String> urls, String taskType, String type,
-                                             Long loginUserId, String route) throws BusinessException {
-        ICdnCacheSettingPlatformService platform = CdnCacheSettingPlatformFactory.getCdnPlatform(route);
-        String taskId;
-        if (ObjectUtil.equal(taskType, "refresh")) {
-            taskId = platform.submitCacheRefresh(urls.toArray(new String[0]), type);
-            if (Assert.notEmpty(taskId)) {
-                cacheTaskService.insertCacheTaskInfo(taskId, taskType, type, route, loginUserId);
-            }
-        } else {
-            taskId = platform.submitCachePreheating(urls.toArray(new String[0]));
-            if (Assert.notEmpty(taskId)) {
-                cacheTaskService.insertCacheTaskInfo(taskId, taskType, null, route, loginUserId);
-            }
-        }
-        return Assert.notEmpty(taskId) ? "" : urls.stream().collect(Collectors.joining(","));
     }
 
     private void appendFailed(StringBuilder failed, String value) {

@@ -1,21 +1,10 @@
 package com.kuocai.cdn.controller.base;
 
-import com.kuocai.cdn.api.aliyun.authentication.AuthenticationService;
-import com.kuocai.cdn.component.AccessTrack;
-import com.kuocai.cdn.service.FaceCertifyVerifyService;
-import com.kuocai.cdn.component.EmailClient;
-import com.kuocai.cdn.component.OssClient;
-import com.kuocai.cdn.component.SmsClient;
 import com.kuocai.cdn.config.SystemConfig;
 import com.kuocai.cdn.constant.ConfigBizTypeConstants;
 import com.kuocai.cdn.dto.resp.RespResult;
-import com.kuocai.cdn.entity.AgentConfig;
 import com.kuocai.cdn.entity.CdnDomain;
-import com.kuocai.cdn.entity.Message;
-import com.kuocai.cdn.entity.PurchasedFlow;
 import com.kuocai.cdn.entity.SysUser;
-import com.kuocai.cdn.entity.TransactionOrder;
-import com.kuocai.cdn.entity.WorkOrder;
 import com.kuocai.cdn.service.*;
 import com.kuocai.cdn.util.Assert;
 import com.kuocai.cdn.util.JedisUtil;
@@ -61,19 +50,9 @@ public class BaseController {
     @Autowired
     protected SysUserBannedService sysUserBannedService;
     @Autowired
-    protected LoginDeviceService loginDeviceService;
-    @Autowired
-    protected WorkOrderService workOrderService;
-    @Autowired
-    protected WorkOrderTypeService workOrderTypeService;
-    @Autowired
     protected CdnDomainService cdnDomainService;
     @Autowired
     protected SysUserAccountService sysUserAccountService;
-    @Autowired
-    protected AuthenticationService authenticationService;
-    @Autowired
-    protected FaceCertifyVerifyService faceCertifyVerifyService;
     @Autowired
     protected OperationLogService operationLogService;
     @Autowired
@@ -81,29 +60,7 @@ public class BaseController {
     @Resource
     protected SysConfigService sysConfigService;
     @Autowired
-    protected WorkOrderMessageService workOrderMessageService;
-    @Autowired
-    protected TransactionOrderService transactionOrderService;
-    @Autowired
-    protected AnnouncementService announcementService;
-    @Autowired
-    protected RealNameAuthenticationService realNameAuthenticationService;
-    @Autowired
-    protected MessageService messageService;
-    @Autowired
     protected CacheTaskService cacheTaskService;
-    @Autowired
-    protected SelfHostedPortForwardService selfHostedPortForwardService;
-
-
-    @Autowired
-    protected EmailClient emailClient;
-    @Autowired
-    protected SmsClient smsClient;
-    @Autowired
-    protected OssClient ossClient;
-    /** @Autowired
-    protected AccessTrack accessTrack; **/
 
 
     protected HttpServletRequest request;
@@ -122,8 +79,6 @@ public class BaseController {
     @Setter
     @Getter
     protected SysUser loginUser;
-    protected Long agentId;
-    protected AgentConfig agentConfig;
     protected WebsiteBaseConfigVo currentWebsiteBaseConfig;
 
     /**
@@ -133,18 +88,12 @@ public class BaseController {
     public void setReqAndRes(HttpServletRequest request, HttpServletResponse response, Map<String, Object> map) throws IOException {
         this.request = request;
         this.response = response;
-        agentId = null;
-        agentConfig = null;
         currentWebsiteBaseConfig = null;
         loginUserId = null;
         loginUserRoleCode = null;
         route = null;
         loginUser = null;
         this.session = request.getSession(true);
-        /** Object claims = request.getAttribute(JwtUtil.CLAIMS_KEY);
-         if (null != claims) {
-
-         } **/
         Map<String, String> userMap = JwtUtil.claimsFormRequest(request);
         if (Assert.notEmpty(userMap)) {
             loginUserId = Long.valueOf(userMap.get("userId"));
@@ -163,7 +112,6 @@ public class BaseController {
         map.put("authorizedVendorCodes", SupportedVendorUtils.allVendorCodes());
         map.put("vendorNameMap", SupportedVendorUtils.vendorNameMap());
         map.put("defaultAuthorizedVendor", SupportedVendorUtils.defaultVendor());
-        // accessTrack.add(request, loginUser);
         if (isPostAndNotSign(request)) {
             return;
         }
@@ -174,8 +122,6 @@ public class BaseController {
             currentWebsiteBaseConfig = SystemConfig.websiteBaseConfig;
         }
         map.put("websiteBaseConfig", currentWebsiteBaseConfig);
-        map.put("selfHostedPortForwardEnabled",
-                selfHostedPortForwardService.isAvailable(route, isAdmin()));
         map.put("websitePermissionConfig", SystemConfig.websitePermissionConfig);
         map.put("websiteAgreementConfig", SystemConfig.websiteAgreementConfig);
         map.put("websiteHomeCodeConfig", SystemConfig.websiteHomeCodeConfig);
@@ -188,30 +134,10 @@ public class BaseController {
         map.put("customFooterEnabled", Assert.notEmpty(SystemConfig.websiteFooterCodeConfig)
                 && Boolean.TRUE.equals(SystemConfig.websiteFooterCodeConfig.getEnabled())
                 && Assert.notEmpty(SystemConfig.websiteFooterCodeConfig.getHtmlCode()));
-        map.put("weChatCodeConfig", SystemConfig.weChatCodeConfig);
-        map.put("weChatLoginEnabled", Assert.notEmpty(SystemConfig.weChatCodeConfig)
-                && Integer.valueOf(1).equals(SystemConfig.weChatCodeConfig.getWechatStatus())
-                && Assert.notEmpty(SystemConfig.weChatCodeConfig.getAppId())
-                && Assert.notEmpty(SystemConfig.weChatCodeConfig.getAppSecret()));
-        map.put("unReadMessages", messageService.queryUnReadMessagesVo(loginUserId));
         map.put("mainLevel1Menus", sysMenuService.queryMainLevel1Menus());
         map.put("mainLevel2Menus", sysMenuService.queryMainLevel2Menus());
-        map.put("proxyLevel2Menus", Collections.emptyList());
-        if ("admin".equals(loginUserRoleCode)) {
-            map.put("newMessageIds", JedisUtil.getListString("admin_work_order_new_message"));
-            map.put("countWaitingWorkOrder", workOrderService.countWaiting());
-            map.put("countWaitingAuthentication", realNameAuthenticationService.countWaiting());
-        }
-        boolean openAgent = false;
-        if (Assert.notEmpty(loginUser)) {
-            // 未绑定手机号
-            if ("GET".equals(request.getMethod()) && Assert.isEmpty(loginUser.getPhone()) && !isPhoneBindingRequest(request.getRequestURI())) {
-                response.sendRedirect("/user-info");
-            }
-        }
-        map.put("openAgent", openAgent);
-        map.put("dashboardLogo", resolveDashboardLogo(openAgent));
-        map.put("dashboardIcon", resolveDashboardIcon(openAgent));
+        map.put("dashboardLogo", resolveDashboardLogo());
+        map.put("dashboardIcon", resolveDashboardIcon());
     }
 
     /**
@@ -223,21 +149,7 @@ public class BaseController {
         return "POST".equals(request.getMethod()) && !request.getRequestURI().contains("register") && !request.getRequestURI().contains("login");
     }
 
-    private boolean isPhoneBindingRequest(String requestURI) {
-        return "/api/verify/phone".equals(requestURI)
-                || "/beta/verify/phone".equals(requestURI)
-                || "/user-info".equals(requestURI);
-    }
-
-    private String resolveDashboardLogo(boolean openAgent) {
-        if (openAgent && Assert.notEmpty(agentConfig)) {
-            if (isCustomLogo(agentConfig.getLogoDashboard())) {
-                return agentConfig.getLogoDashboard();
-            }
-            if (isCustomLogo(agentConfig.getLogo())) {
-                return agentConfig.getLogo();
-            }
-        }
+    private String resolveDashboardLogo() {
         if (Assert.notEmpty(currentWebsiteBaseConfig)
                 && isCustomLogo(currentWebsiteBaseConfig.getWebsiteLogoImg())) {
             return currentWebsiteBaseConfig.getWebsiteLogoImg();
@@ -245,10 +157,7 @@ public class BaseController {
         return null;
     }
 
-    private String resolveDashboardIcon(boolean openAgent) {
-        if (openAgent && Assert.notEmpty(agentConfig) && isCustomLogo(agentConfig.getIcon())) {
-            return agentConfig.getIcon();
-        }
+    private String resolveDashboardIcon() {
         if (Assert.notEmpty(currentWebsiteBaseConfig)
                 && isCustomLogo(currentWebsiteBaseConfig.getWebsiteIconImg())) {
             return currentWebsiteBaseConfig.getWebsiteIconImg();
@@ -303,118 +212,6 @@ public class BaseController {
             if (!canAccessDomain(cdnDomain)) {
                 return RespResult.fail("FORBIDDEN");
             }
-        }
-        return null;
-    }
-
-    protected boolean canAccessTransactionOrder(TransactionOrder transactionOrder) {
-        return Assert.notEmpty(transactionOrder) && (isAdmin() || (loginUserId != null && loginUserId.equals(transactionOrder.getUserId())));
-    }
-
-    protected RespResult checkTransactionOrderAccess(TransactionOrder transactionOrder) {
-        if (Assert.isEmpty(transactionOrder)) {
-            return RespResult.notFound("order");
-        }
-        if (!canAccessTransactionOrder(transactionOrder)) {
-            return RespResult.fail("FORBIDDEN");
-        }
-        return null;
-    }
-
-    protected boolean canAccessPurchasedFlow(PurchasedFlow purchasedFlow) {
-        return Assert.notEmpty(purchasedFlow) && (isAdmin() || (loginUserId != null && loginUserId.equals(purchasedFlow.getUserId())));
-    }
-
-    protected RespResult checkPurchasedFlowAccess(PurchasedFlow purchasedFlow) {
-        if (Assert.isEmpty(purchasedFlow)) {
-            return RespResult.notFound("purchasedFlow");
-        }
-        if (!canAccessPurchasedFlow(purchasedFlow)) {
-            return RespResult.fail("FORBIDDEN");
-        }
-        return null;
-    }
-
-    protected boolean canAccessWorkOrder(WorkOrder workOrder) {
-        return Assert.notEmpty(workOrder) && (isAdmin() || (loginUserId != null && loginUserId.equals(workOrder.getUserId())));
-    }
-
-    protected RespResult checkWorkOrderAccess(WorkOrder workOrder) {
-        if (Assert.isEmpty(workOrder)) {
-            return RespResult.notFound("workOrder");
-        }
-        if (!canAccessWorkOrder(workOrder)) {
-            return RespResult.fail("FORBIDDEN");
-        }
-        return null;
-    }
-
-    protected RespResult checkWorkOrderIdsAccess(Collection<Long> workOrderIds) {
-        if (Assert.isEmpty(workOrderIds)) {
-            return RespResult.paramEmpty("workOrder");
-        }
-        Set<Long> uniqueWorkOrderIds = new HashSet<>(workOrderIds);
-        if (uniqueWorkOrderIds.contains(null)) {
-            return RespResult.paramEmpty("workOrder");
-        }
-        Collection<WorkOrder> workOrders = workOrderService.queryByIds(uniqueWorkOrderIds);
-        if (workOrders == null || workOrders.size() != uniqueWorkOrderIds.size()) {
-            return RespResult.notFound("workOrder");
-        }
-        for (WorkOrder workOrder : workOrders) {
-            RespResult access = checkWorkOrderAccess(workOrder);
-            if (access != null) {
-                return access;
-            }
-        }
-        return null;
-    }
-
-    protected boolean canAccessMessage(Message message) {
-        return Assert.notEmpty(message) && (isAdmin() || (loginUserId != null && loginUserId.equals(message.getReceiveUserId())));
-    }
-
-    protected RespResult checkMessageAccess(Message message) {
-        if (Assert.isEmpty(message)) {
-            return RespResult.notFound("message");
-        }
-        if (!canAccessMessage(message)) {
-            return RespResult.fail("FORBIDDEN");
-        }
-        return null;
-    }
-
-    protected RespResult checkMessageIdsAccess(Collection<Long> messageIds) {
-        if (Assert.isEmpty(messageIds)) {
-            return RespResult.paramEmpty("message");
-        }
-        Set<Long> uniqueMessageIds = new HashSet<>(messageIds);
-        if (uniqueMessageIds.contains(null)) {
-            return RespResult.paramEmpty("message");
-        }
-        Collection<Message> messages = messageService.queryByIds(uniqueMessageIds);
-        if (messages == null || messages.size() != uniqueMessageIds.size()) {
-            return RespResult.notFound("message");
-        }
-        for (Message message : messages) {
-            RespResult access = checkMessageAccess(message);
-            if (access != null) {
-                return access;
-            }
-        }
-        return null;
-    }
-
-    protected boolean canAccessAgentConfig(AgentConfig agentConfig) {
-        return Assert.notEmpty(agentConfig) && (isAdmin() || (loginUserId != null && loginUserId.equals(agentConfig.getUserId())));
-    }
-
-    protected RespResult checkAgentConfigAccess(AgentConfig agentConfig) {
-        if (Assert.isEmpty(agentConfig)) {
-            return RespResult.notFound("agentConfig");
-        }
-        if (!canAccessAgentConfig(agentConfig)) {
-            return RespResult.fail("FORBIDDEN");
         }
         return null;
     }

@@ -15,8 +15,8 @@ import com.kuocai.cdn.api.tencent.dns.CreateRecordResponse;
 import com.kuocai.cdn.api.tencent.dns.TencentApi;
 import com.kuocai.cdn.api.tencent.dns.dto.CreateRecordDTO;
 import com.kuocai.cdn.api.tencent.dns.properties.TencentDns;
-import com.kuocai.cdn.common.mongo.entity.AliyunSetCdnDomainConfig;
-import com.kuocai.cdn.config.MyRabbitConfig;
+import com.kuocai.cdn.common.mysql.dao.AliyunSetCdnDomainConfigDao;
+import com.kuocai.cdn.common.mysql.entity.AliyunSetCdnDomainConfig;
 import com.kuocai.cdn.entity.CdnDomain;
 import com.kuocai.cdn.entity.CdnDomainSources;
 import com.kuocai.cdn.enumeration.domainmerage.CdnRoute;
@@ -26,14 +26,11 @@ import com.kuocai.cdn.service.base.BaseService;
 import com.kuocai.cdn.service.domain.operation.optional.ICdnDomainVerifyService;
 import com.kuocai.cdn.util.*;
 import com.kuocai.cdn.vo.*;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -49,19 +46,16 @@ import static com.kuocai.cdn.api.aliyun.cdn.AliyunCdnErrorCodeHandler.catchExcep
 @Service
 public class AliyunDomainServiceImpl extends BaseService<CdnDomain> implements ICdnPlatformService, ICdnDomainVerifyService {
 
-    private final MongoTemplate mongoTemplate;
-
-    private final RabbitTemplate rabbitTemplate;
+    private final AliyunSetCdnDomainConfigDao aliyunSetCdnDomainConfigDao;
 
     private final Client aliyunCdnClient;
 
     private final Executor executorService;
 
-    AliyunDomainServiceImpl(MongoTemplate mongoTemplate, RabbitTemplate rabbitTemplate,
+    AliyunDomainServiceImpl(AliyunSetCdnDomainConfigDao aliyunSetCdnDomainConfigDao,
                             @Qualifier("aliyunCdnClient") Client aliyunCdnClient,
                             @Qualifier("cdnDomainExecutor") Executor executorService) {
-        this.mongoTemplate = mongoTemplate;
-        this.rabbitTemplate = rabbitTemplate;
+        this.aliyunSetCdnDomainConfigDao = aliyunSetCdnDomainConfigDao;
         this.aliyunCdnClient = aliyunCdnClient;
         this.executorService = executorService;
     }
@@ -284,30 +278,34 @@ public class AliyunDomainServiceImpl extends BaseService<CdnDomain> implements I
     }
 
     private AliyunSetCdnDomainConfig saveConfig(AliyunSetCdnDomainConfig config) {
-        // 查询当前域名是否有未完成的配置 promise=pending 修改 cancel
-        Query query = new Query();
-        query.addCriteria(Criteria.where("domain").is(config.getDomain())
-                .and("functionNames").is(config.getFunctionNames())
-                .and("promise").is("pending")
-        );
-        mongoTemplate.find(query, AliyunSetCdnDomainConfig.class).forEach(item -> {
+        // 将同域名同配置的未完成任务(pending)置为 cancel
+        QueryWrapper<AliyunSetCdnDomainConfig> wrapper = new QueryWrapper<>();
+        wrapper.eq("domain", config.getDomain())
+                .eq("function_names", config.getFunctionNames())
+                .eq("promise", "pending");
+        aliyunSetCdnDomainConfigDao.selectList(wrapper).forEach(item -> {
             item.setPromise("cancel");
-            mongoTemplate.save(item);
+            aliyunSetCdnDomainConfigDao.updateById(item);
         });
-        // 保存新的配置
-        return mongoTemplate.save(config);
+        // 保存新的配置任务
+        aliyunSetCdnDomainConfigDao.insert(config);
+        return config;
     }
 
     private void pushConfig(String domainName, AliyunCdnConfigFunctions functions) {
         String functionNames = functions.getFunctionNames();
-        AliyunSetCdnDomainConfig config = new AliyunSetCdnDomainConfig();
-        config.setDomain(domainName);
-        config.setFunctions(functions.getJson());
-        config.setFunctionNames(functionNames);
-        // 保存
+        AliyunSetCdnDomainConfig config = new AliyunSetCdnDomainConfig(domainName, functionNames, functions.getJson());
+        // 保存任务记录
         AliyunSetCdnDomainConfig saved = saveConfig(config);
-        // 提交到队列
-        rabbitTemplate.convertAndSend(MyRabbitConfig.EXCHANGE_NAME, MyRabbitConfig.ALIYUN_CDN_CONFIG_QUEUE_NAME, saved.getId());
+        // 同步执行配置下发（原 RabbitMQ 异步链路改为同步）
+        try {
+            updateBatchCdnDomainConfig(saved);
+            saved.setPromise("resolved");
+        } catch (BusinessException e) {
+            saved.setPromise("rejected");
+            log.error("阿里云CDN配置下发任务 {} 失败", domainName, e);
+        }
+        aliyunSetCdnDomainConfigDao.updateById(saved);
     }
 
     @Override

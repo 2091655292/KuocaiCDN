@@ -10,7 +10,6 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.kuocai.cdn.constant.KuoCaiConstants;
 import com.kuocai.cdn.entity.CdnDomain;
 import com.kuocai.cdn.entity.SysUser;
-import com.kuocai.cdn.entity.WorkOrder;
 import com.kuocai.cdn.enumeration.domainmerage.CdnRoute;
 import com.kuocai.cdn.enumeration.domainmerage.domain.QueryStatisticsEnum;
 import com.kuocai.cdn.enumeration.domainmerage.route.CdnOperationRoute;
@@ -54,9 +53,6 @@ public class CdnDomainStatisticsService {
 
     @Autowired
     private SysUserService sysUserService;
-
-    @Autowired
-    private WorkOrderService workOrderService;
 
     @Autowired
     private HttpsCertificateService httpsCertificateService;
@@ -174,15 +170,10 @@ public class CdnDomainStatisticsService {
         // 获取用户总数
         long userCount = sysUserService.countByWrapper(new QueryWrapper<>());
 
-        // 获取工单总数
-        QueryWrapper<WorkOrder> workOrderQueryWrapper = new QueryWrapper<>();
-        workOrderQueryWrapper.eq("user_id", userId);
-        long orderCount = workOrderService.countByWrapper(workOrderQueryWrapper);
-
         result.put("domainCount", (long) domainCount);
         result.put("certificateCount", certificateCount);
         result.put("userCount", userCount);
-        result.put("orderCount", orderCount);
+        result.put("orderCount", 0L);
         return result;
     }
 

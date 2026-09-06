@@ -15,9 +15,7 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.zip.CRC32;
 
 @Slf4j
@@ -86,25 +84,6 @@ public class CdnAreaRouteService {
         return targets;
     }
 
-    public List<String> configuredSelfHostedRoutes() {
-        Set<String> routes = new LinkedHashSet<>();
-        for (String serviceArea : new String[]{
-                CdnServiceAreaPolicyService.MAINLAND,
-                CdnServiceAreaPolicyService.OVERSEAS,
-                CdnServiceAreaPolicyService.GLOBAL}) {
-            try {
-                for (AreaRouteTargetVo target : resolveConfiguredTargets(serviceArea)) {
-                    if (target != null && CdnRoute.isSelfHosted(target.getRoute())) {
-                        routes.add(target.getRoute());
-                    }
-                }
-            } catch (BusinessException e) {
-                log.warn("读取自建 CDN 区域线路失败，区域={}，原因={}", serviceArea, e.getMessage());
-            }
-        }
-        return new ArrayList<>(routes);
-    }
-
     public String configuredMode(String serviceArea) {
         WebsiteBaseConfigVo config = SystemConfig.websiteBaseConfig;
         String mode = null;
@@ -142,12 +121,7 @@ public class CdnAreaRouteService {
         if (Assert.isEmpty(fallbackRoute)) {
             throw new BusinessException("当前用户未配置默认 CDN 线路");
         }
-        String fixedArea = CdnRoute.selfHostedServiceArea(fallbackRoute);
-        if (fixedArea != null && !fixedArea.equals(serviceArea)) {
-            throw new BusinessException("当前用户默认线路不支持" + areaName(serviceArea));
-        }
-        if (!SupportedVendorUtils.allVendorCodes().contains(fallbackRoute)
-                && !CdnRoute.SELF_HOSTED.getCode().equals(fallbackRoute)) {
+        if (!SupportedVendorUtils.allVendorCodes().contains(fallbackRoute)) {
             throw new BusinessException("当前系统不支持线路：" + vendorName(fallbackRoute));
         }
         return routeTarget(fallbackRoute);
@@ -175,13 +149,8 @@ public class CdnAreaRouteService {
 
     private void requireTargetArea(String route, String serviceArea) throws BusinessException {
         if (!SupportedVendorUtils.allVendorCodes().contains(route)
-                || CdnRoute.MULTI_CDN.getCode().equals(route)
-                || CdnRoute.SELF_HOSTED.getCode().equals(route)) {
+                || CdnRoute.MULTI_CDN.getCode().equals(route)) {
             throw new BusinessException("当前系统不支持线路：" + vendorName(route));
-        }
-        String fixedArea = CdnRoute.selfHostedServiceArea(route);
-        if (fixedArea != null && !fixedArea.equals(serviceArea)) {
-            throw new BusinessException(vendorName(route) + "不能用于" + areaName(serviceArea));
         }
     }
 

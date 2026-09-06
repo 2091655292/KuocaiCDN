@@ -60,10 +60,6 @@ public class CdnServiceAreaPolicyService {
             if (target.startsWith(ROUTE_TARGET_PREFIX)) {
                 String route = target.substring(ROUTE_TARGET_PREFIX.length()).trim();
                 requireSupportedRoute(route);
-                String fixedArea = CdnRoute.selfHostedServiceArea(route);
-                if (fixedArea != null && serviceArea != null && !fixedArea.equals(serviceArea)) {
-                    throw new BusinessException(vendorName(route) + "不能配置到当前加速区域");
-                }
                 normalized.add(routeTarget(route));
                 continue;
             }
@@ -79,14 +75,6 @@ public class CdnServiceAreaPolicyService {
     public boolean isAllowed(String route, Long vendorAccountId, String serviceArea) {
         if (Assert.isEmpty(route) || !isKnownArea(serviceArea)) {
             return false;
-        }
-        String fixedArea = CdnRoute.selfHostedServiceArea(route);
-        if (fixedArea != null) {
-            return fixedArea.equals(serviceArea);
-        }
-        // Legacy self_hosted users select a concrete product route on the create page.
-        if (CdnRoute.SELF_HOSTED.getCode().equals(route)) {
-            return true;
         }
         if (!SupportedVendorUtils.allVendorCodes().contains(route)) {
             return false;
@@ -153,8 +141,7 @@ public class CdnServiceAreaPolicyService {
 
     private boolean isConfigurableRoute(String route) {
         return SupportedVendorUtils.allVendorCodes().contains(route)
-                && !CdnRoute.MULTI_CDN.getCode().equals(route)
-                && !CdnRoute.SELF_HOSTED.getCode().equals(route);
+                && !CdnRoute.MULTI_CDN.getCode().equals(route);
     }
 
     private String vendorName(String route) {

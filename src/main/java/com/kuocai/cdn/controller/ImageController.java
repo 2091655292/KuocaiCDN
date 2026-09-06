@@ -1,9 +1,6 @@
 package com.kuocai.cdn.controller;
 
-import com.kuocai.cdn.component.OssClient;
-import io.minio.GetObjectResponse;
-import io.minio.StatObjectResponse;
-import io.minio.errors.ErrorResponseException;
+import com.kuocai.cdn.component.LocalStorageClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
@@ -17,48 +14,43 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.util.Locale;
 
-/** Serves uploaded image objects when the reverse proxy does not expose MinIO directly. */
+/** Serves uploaded images from local storage via the same-origin endpoint. */
 @RestController
 @Slf4j
 public class ImageController {
 
-    private final OssClient ossClient;
+    private final LocalStorageClient localStorageClient;
 
-    public ImageController(OssClient ossClient) {
-        this.ossClient = ossClient;
+    public ImageController(LocalStorageClient localStorageClient) {
+        this.localStorageClient = localStorageClient;
     }
 
     @GetMapping("/image/{objectName:.+}")
     public ResponseEntity<StreamingResponseBody> image(@PathVariable String objectName) {
-        if (!ossClient.isPublicImageObjectName(objectName)) {
+        if (!localStorageClient.isPublicImageObjectName(objectName)) {
             return notFound();
         }
 
-        StatObjectResponse stat;
+        long size;
         try {
-            stat = ossClient.getStatObject(objectName);
-        } catch (ErrorResponseException e) {
-            if (isNotFound(e)) {
-                return notFound();
-            }
-            log.warn("Unable to inspect public image object {}", objectName, e);
-            return serviceUnavailable();
+            size = localStorageClient.getObjectSize(objectName);
         } catch (Exception e) {
             log.warn("Unable to inspect public image object {}", objectName, e);
-            return serviceUnavailable();
+            return notFound();
         }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(contentType(objectName));
-        headers.setContentLength(stat.size());
+        headers.setContentLength(size);
         headers.setCacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic());
         headers.set("X-Content-Type-Options", "nosniff");
 
         StreamingResponseBody body = outputStream -> {
-            try (GetObjectResponse inputStream = ossClient.getObject(objectName)) {
+            try (InputStream inputStream = localStorageClient.getObject(objectName)) {
                 StreamUtils.copy(inputStream, outputStream);
             } catch (Exception e) {
                 log.warn("Unable to stream public image object {}", objectName, e);
@@ -83,22 +75,13 @@ public class ImageController {
             case "webp":
                 return MediaType.parseMediaType("image/webp");
             case "bmp":
-                return MediaType.parseMediaType("image/bmp");
+                return MediaType.IMAGE_PNG;
             default:
                 return MediaType.IMAGE_PNG;
         }
     }
 
-    private boolean isNotFound(ErrorResponseException exception) {
-        String code = exception.errorResponse() == null ? null : exception.errorResponse().code();
-        return "NoSuchKey".equals(code) || "NoSuchObject".equals(code) || "NotFound".equals(code);
-    }
-
     private ResponseEntity<StreamingResponseBody> notFound() {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-    }
-
-    private ResponseEntity<StreamingResponseBody> serviceUnavailable() {
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
     }
 }

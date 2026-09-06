@@ -8,8 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.kuocai.cdn.async.SmsAsync;
-import com.kuocai.cdn.component.OssClient;
+import com.kuocai.cdn.component.LocalStorageClient;
 import com.kuocai.cdn.config.SystemConfig;
 import com.kuocai.cdn.constant.KuoCaiConstants;
 import com.kuocai.cdn.constant.UserConstants;
@@ -60,22 +59,13 @@ public class SysUserService extends BaseService<SysUser> {
     private SysUserDao dao;
 
     @Autowired
-    private OssClient ossClient;
+    private LocalStorageClient ossClient;
 
     @Autowired
     private SysRoleService roleService;
 
     @Autowired
-    private LoginDeviceService loginDeviceService;
-
-    @Autowired
     private SysUserAccountService accountService;
-
-    @Value("${minio.bucketName}")
-    private String bucketName;
-
-    @Autowired
-    private SmsAsync sendSmsCode;
 
     @Autowired
     private SysUserBannedService sysUserBannedService;
@@ -213,12 +203,6 @@ public class SysUserService extends BaseService<SysUser> {
         if (checkUserAccountLogin(sysUser, userPwd)) {
             Long userId = sysUser.getId();
             String token = getUserSignToken(sysUser, sysUserVo.getRemember(), request);
-            try {
-                // 保存登录设备记录
-                loginDeviceService.saveLoginDevice(userId, request);
-            } catch (Exception e) {
-                log.error("保存登录设备记录失败！{}", e.getMessage());
-            }
             // 更新登录信息
             updateLoginInfo(userId, request);
             log.info("用户登录成功，账户：{}", userAccount);
@@ -764,34 +748,9 @@ public class SysUserService extends BaseService<SysUser> {
      */
     public Map<String, List<String>> getWeekLoginCount() throws BusinessException {
         Map<String, List<String>> map = new HashMap<>(2);
-        List<String> thisWeekLogin = new LinkedList<>();
-        int dayWeek = KuocaiBaseUtil.getNowWeekNum();
-        try {
-            Boolean lastWeekLogin = JedisUtil.exists(KuoCaiConstants.LAST_WEEK_LOGIN);
-            if (lastWeekLogin && dayWeek == 1) {
-                map.put("lastWeekLogin", JedisUtil.getListString(KuoCaiConstants.LAST_WEEK_LOGIN));
-            } else {
-                // 获取上周登录数并且放到redis中
-                List<String> latWeekLoginCount = loginDeviceService.getLatWeekLoginCount(KuocaiBaseUtil.getLastSunDayTime());
-                map.put("lastWeekLogin", latWeekLoginCount);
-                JedisUtil.setList(KuoCaiConstants.LAST_WEEK_LOGIN, latWeekLoginCount);
-            }
-            if (!KuocaiBaseUtil.todayIsWeeks(Calendar.MONDAY)) {
-                List<String> temp = JedisUtil.getListString(KuoCaiConstants.THIS_WEEK_LOGIN);
-                // 判断redis是否为null，且大小是否为今天的星期数
-                if (Assert.notEmpty(temp) && temp.size() == dayWeek - 1) {
-                    thisWeekLogin = temp;
-                } else {
-                    thisWeekLogin = loginDeviceService.getLatWeekLoginCount(KuocaiBaseUtil.accessTimeString(7 - dayWeek));
-                    thisWeekLogin.subList(dayWeek - 1, 7).clear();
-                    JedisUtil.setList(KuoCaiConstants.THIS_WEEK_LOGIN, thisWeekLogin);
-                }
-            }
-            thisWeekLogin.add(loginDeviceService.getLoginCountByTime(KuocaiBaseUtil.accessTimeString(0)));
-            map.put("thisWeekLogin", thisWeekLogin);
-        } catch (Exception e) {
-            throw new BusinessException("获取上周注册数失败：{}", e.getMessage());
-        }
+        // 登录设备统计依赖的组件已随功能裁剪移除，返回占位数据保持仪表盘渲染
+        map.put("lastWeekLogin", Arrays.asList("0", "0", "0", "0", "0", "0", "0"));
+        map.put("thisWeekLogin", Arrays.asList("0", "0", "0", "0", "0", "0", "0"));
         return map;
     }
 
@@ -867,16 +826,6 @@ public class SysUserService extends BaseService<SysUser> {
         } else {
             return JSONObject.toJavaObject(userJson, SysUser.class);
         }
-    }
-
-    /**
-     * 下级用户查询代理用户的代理配置
-     *
-     * @param userId 下级用户ID
-     * @return 代理配置
-     */
-    public AgentConfig queryAgentConfigByJuniorUser(Long userId) {
-        return null;
     }
 
     public List<SysUser> queryByAccount(String account, Long roleId) {

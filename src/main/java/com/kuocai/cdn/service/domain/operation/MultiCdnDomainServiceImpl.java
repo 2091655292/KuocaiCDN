@@ -11,13 +11,10 @@ import com.kuocai.cdn.api.tencent.dns.dto.DeleteRecordDTO;
 import com.kuocai.cdn.api.tencent.dns.properties.TencentDns;
 import com.kuocai.cdn.entity.CdnDomain;
 import com.kuocai.cdn.entity.CdnDomainRouteBinding;
-import com.kuocai.cdn.entity.SelfHostedDomainConfig;
-import com.kuocai.cdn.entity.SelfHostedNodeGroup;
 import com.kuocai.cdn.enumeration.domainmerage.CdnRoute;
 import com.kuocai.cdn.exception.BusinessException;
 import com.kuocai.cdn.service.CdnDomainRouteBindingService;
 import com.kuocai.cdn.service.CdnDomainService;
-import com.kuocai.cdn.service.SelfHostedCdnService;
 import com.kuocai.cdn.service.factory.CdnPlatformFactory;
 import com.kuocai.cdn.util.Assert;
 import com.kuocai.cdn.util.DomainUtil;
@@ -45,14 +42,11 @@ public class MultiCdnDomainServiceImpl implements ICdnPlatformService {
 
     private final CdnDomainService cdnDomainService;
     private final CdnDomainRouteBindingService bindingService;
-    private final SelfHostedCdnService selfHostedCdnService;
 
     public MultiCdnDomainServiceImpl(CdnDomainService cdnDomainService,
-                                     CdnDomainRouteBindingService bindingService,
-                                     SelfHostedCdnService selfHostedCdnService) {
+                                     CdnDomainRouteBindingService bindingService) {
         this.cdnDomainService = cdnDomainService;
         this.bindingService = bindingService;
-        this.selfHostedCdnService = selfHostedCdnService;
     }
 
     public CdnDomain create(ResolvedAreaRouteVo routePlan, Long userId, String domainName,
@@ -68,15 +62,8 @@ public class MultiCdnDomainServiceImpl implements ICdnPlatformService {
                 ICdnPlatformService platform = CdnPlatformFactory.getCdnPlatform(target.getRoute());
                 CdnDomain child;
                 try {
-                    if (platform instanceof SelfHostedDomainServiceImpl) {
-                        child = ((SelfHostedDomainServiceImpl) platform).createForRoute(
-                                target.getRoute(), userId, domainName, businessType, serviceArea,
-                                originType, originAddr, originProtocol, httpPort, httpsPort,
-                                originHost, originWeight);
-                    } else {
-                        child = platform.create(userId, domainName, businessType, serviceArea, originType, originAddr,
-                                originProtocol, httpPort, httpsPort, originHost, originWeight);
-                    }
+                    child = platform.create(userId, domainName, businessType, serviceArea, originType, originAddr,
+                            originProtocol, httpPort, httpsPort, originHost, originWeight);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new BusinessException("创建多 CDN 域名被中断");
@@ -87,9 +74,7 @@ public class MultiCdnDomainServiceImpl implements ICdnPlatformService {
                 child.setRoute(target.getRoute());
                 CreatedTarget createdTarget = new CreatedTarget(target, child, null);
                 createdTargets.add(createdTarget);
-                String upstreamCname = platform instanceof SelfHostedDomainServiceImpl
-                        ? ((SelfHostedDomainServiceImpl) platform).prepareForMultiCdn(child)
-                        : extractUpstreamCname(child, target.getRoute());
+                String upstreamCname = extractUpstreamCname(child, target.getRoute());
                 if (Assert.isEmpty(upstreamCname)) {
                     throw new BusinessException(target.getRouteName() + "尚未返回上游 CNAME");
                 }
@@ -149,11 +134,6 @@ public class MultiCdnDomainServiceImpl implements ICdnPlatformService {
     }
 
     private CreatedTarget choosePrimary(List<CreatedTarget> targets) {
-        for (CreatedTarget target : targets) {
-            if (CdnRoute.isSelfHosted(target.target.getRoute()) && target.child.getId() != null) {
-                return target;
-            }
-        }
         for (CreatedTarget target : targets) {
             if (target.child.getId() != null) {
                 return target;
@@ -392,9 +372,7 @@ public class MultiCdnDomainServiceImpl implements ICdnPlatformService {
             CdnDomain child = bindingService.toChildDomain(domain, binding);
             try {
                 DomainConfig config = invokeResult(binding, child, (platform, targetDomain) ->
-                        platform instanceof SelfHostedDomainServiceImpl
-                                ? ((SelfHostedDomainServiceImpl) platform).getDomainConfig(targetDomain)
-                                : platform.getDomainConfig(targetDomain.getDomainName()));
+                        platform.getDomainConfig(targetDomain.getDomainName()));
                 if (config == null || config.getDomainBasicInfo() == null) {
                     failures.add(binding.getTargetKey() + "：未返回域名基础信息");
                     continue;
@@ -567,18 +545,7 @@ public class MultiCdnDomainServiceImpl implements ICdnPlatformService {
         if (CdnRoute.ALIYUN.getCode().equals(route)) return domain.getCnameAliyun();
         if (CdnRoute.BAIDU.getCode().equals(route)) return domain.getCnameBaidu();
         if (CdnRoute.KINGSOFT.getCode().equals(route)) return domain.getCnameKingsoft();
-        if (CdnRoute.isSelfHosted(route)) return selfHostedUpstreamCname(domain);
         return domain.getCname();
-    }
-
-    private String selfHostedUpstreamCname(CdnDomain domain) throws BusinessException {
-        SelfHostedDomainConfig config = selfHostedCdnService.getDomainConfig(domain.getId());
-        for (SelfHostedNodeGroup group : selfHostedCdnService.listGroups()) {
-            if (group.getId().equals(config.getNodeGroupId())) {
-                return selfHostedCdnService.groupCname(group);
-            }
-        }
-        throw new BusinessException("自建 CDN 节点组不存在");
     }
 
     private void mergeVendorCname(CdnDomain parent, CdnDomain child) {

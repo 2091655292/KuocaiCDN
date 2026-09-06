@@ -1,13 +1,10 @@
 package com.kuocai.cdn.controller.login;
 
-import com.kuocai.cdn.async.SmsAsync;
-import com.kuocai.cdn.config.SystemConfig;
 import com.kuocai.cdn.controller.base.BaseController;
 import com.kuocai.cdn.dto.resp.RespResult;
 import com.kuocai.cdn.entity.SysUser;
 import com.kuocai.cdn.exception.BusinessException;
 import com.kuocai.cdn.service.SysUserService;
-import com.kuocai.cdn.service.InstallationStateService;
 import com.kuocai.cdn.util.Assert;
 import com.kuocai.cdn.util.AdminPathUtils;
 import com.kuocai.cdn.util.GeetestUtils;
@@ -38,17 +35,11 @@ import java.util.Map;
 @Scope(value = "session")
 public class LoginController extends BaseController {
 
-    LoginController(SysUserService userService, SmsAsync sendSmsCode,
-                    InstallationStateService installationStateService) {
+    LoginController(SysUserService userService) {
         this.userService = userService;
-        this.sendSmsCode = sendSmsCode;
-        this.installationStateService = installationStateService;
     }
 
     private final SysUserService userService;
-
-    private final SmsAsync sendSmsCode;
-    private final InstallationStateService installationStateService;
 
     /**
      * 管理员登录
@@ -69,7 +60,7 @@ public class LoginController extends BaseController {
         try {
             String token = userService.loginUser(userVo, request);
             addAuthCookie(token, Boolean.TRUE.equals(userVo.getRemember()), request);
-            return RespResult.success("登录成功", installationStateService.isPending() ? "/setup" : "/dashboard");
+            return RespResult.success("登录成功", "/dashboard");
         } catch (BusinessException e) {
             return RespResult.fail(e.getMessage());
         }
@@ -117,129 +108,6 @@ public class LoginController extends BaseController {
     }
 
     /**
-     * 发送短信验证码
-     */
-    @PostMapping("/login/sendSmsCode")
-    @ResponseBody
-    public RespResult sendSmsCode(String userPhone, String verify) {
-        if (Assert.isEmpty(loginUser)) {
-            return RespResult.fail("请先登录，再进行操作");
-        }
-        if (!GeetestUtils.validate(verify)) {
-            return RespResult.fail("人机验证失败，请重试");
-        }
-        if (!ValidatorUtils.isPhone(userPhone)) {
-            return RespResult.fail("手机号码格式错误");
-        }
-        if (userPhone.equals(loginUser.getPhone())) {
-            return RespResult.fail("手机号码尚未修改");
-        }
-        SysUser existUser = userService.queryByPhone(userPhone);
-        if (Assert.notEmpty(existUser)) {
-            return RespResult.fail("手机号码已被占用");
-        }
-        try {
-            if (Assert.notEmpty(agentConfig) && !agentConfig.smsConfigEmpty()) {
-                sendSmsCode.sendSmsCode(agentConfig.smsServiceVoConfig(), agentConfig.smsTemplateVoConfig(), loginUserId, userPhone);
-            } else {
-                sendSmsCode.sendSmsCode(SystemConfig.smsConfig, SystemConfig.smsTemplateConfig, loginUserId, userPhone);
-            }
-        } catch (Exception e) {
-            return RespResult.fail(e.getMessage());
-        }
-        return RespResult.success("发送成功");
-    }
-
-    /**
-     * 发送短信验证码用户注册
-     */
-    @PostMapping("/login/sendSmsCodeTemplate")
-    @ResponseBody
-    public RespResult sendSmsCodeTemplate(String userPhone, String verify) {
-        if (!GeetestUtils.validate(verify)) {
-            return RespResult.fail("人机验证失败，请重试");
-        }
-        if (!ValidatorUtils.isPhone(userPhone)) {
-            return RespResult.fail("手机格式错误");
-        }
-        if (Assert.notEmpty(userService.queryByPhone(userPhone))) {
-            return RespResult.fail("此手机号已注册，快去登录吧");
-        }
-        try {
-            if (Assert.notEmpty(agentConfig) && !agentConfig.smsConfigEmpty()) {
-                sendSmsCode.sendSmsCodeRegister(agentConfig.smsServiceVoConfig(), agentConfig.smsTemplateVoConfig(), userPhone);
-            } else {
-                sendSmsCode.sendSmsCodeRegister(SystemConfig.smsConfig, SystemConfig.smsTemplateConfig, userPhone);
-            }
-        } catch (Exception e) {
-            return RespResult.fail("验证码发送失败"+e.getMessage());
-        }
-        return RespResult.success("发送成功");
-    }
-
-    /**
-     * 发送短信验证码用户注册
-     */
-    @PostMapping("/login/sendEmailCodeTemplate")
-    @ResponseBody
-    public RespResult sendEmailCodeTemplate(String userEmail, String verify) {
-        if (!GeetestUtils.validate(verify)) {
-            return RespResult.fail("人机验证失败，请重试");
-        }
-        if (!ValidatorUtils.isEmail(userEmail)) {
-            return RespResult.fail("邮箱地址格式错误");
-        }
-        SysUser existUser = userService.queryByEmail(userEmail);
-        if (Assert.notEmpty(existUser)) {
-            return RespResult.fail("邮箱地址已被占用");
-        }
-        try {
-            if (Assert.notEmpty(agentConfig) && !agentConfig.emailConfigEmpty()) {
-                sendSmsCode.sendEmailCodeRegister(agentConfig.emailServiceVoConfig(), agentConfig.emailTemplateVoConfig(), userEmail);
-            } else {
-                sendSmsCode.sendEmailCodeRegister(SystemConfig.emailConfig, SystemConfig.emailTemplateConfig, userEmail);
-            }
-        } catch (Exception e) {
-            return RespResult.fail("验证码发送失败");
-        }
-        return RespResult.success("发送成功");
-    }
-
-    /**
-     * 发送邮箱验证码
-     */
-    @PostMapping("/login/sendEmailCode")
-    @ResponseBody
-    public RespResult sendEmailCode(String userEmail, String verify) {
-        if (Assert.isEmpty(loginUser)) {
-            return RespResult.fail("请先登录，再进行操作");
-        }
-        if (!GeetestUtils.validate(verify)) {
-            return RespResult.fail("人机验证失败，请重试");
-        }
-        if (!ValidatorUtils.isEmail(userEmail)) {
-            return RespResult.fail("邮箱地址格式错误");
-        }
-        if (userEmail.equals(loginUser.getEmail())) {
-            return RespResult.fail("邮箱地址尚未修改");
-        }
-        SysUser existUser = userService.queryByEmail(userEmail);
-        if (Assert.notEmpty(existUser)) {
-            return RespResult.fail("邮箱地址已被占用");
-        }
-        try {
-            if (Assert.notEmpty(agentConfig) && !agentConfig.emailConfigEmpty()) {
-                sendSmsCode.sendEmailCode(agentConfig.emailServiceVoConfig(), agentConfig.emailTemplateVoConfig(), loginUserId, userEmail);
-            } else {
-                sendSmsCode.sendEmailCode(SystemConfig.emailConfig, SystemConfig.emailTemplateConfig, loginUserId, userEmail);
-            }
-        } catch (Exception e) {
-            return RespResult.fail("验证码发送失败");
-        }
-        return RespResult.success("发送成功");
-    }
-
-    /**
      * 获取登录密码
      */
     @PostMapping("/login/getPassword")
@@ -257,79 +125,6 @@ public class LoginController extends BaseController {
             return RespResult.fail(e.getMessage());
         }
         return RespResult.success("我们已将您的登录密码发送至 " + userAccount + ", 请注意查收");
-    }
-
-    @PostMapping("/login/sendPasswordResetCode")
-    @ResponseBody
-    public RespResult sendPasswordResetCode(String userAccount, String verify) {
-        if (!GeetestUtils.validate(verify)) {
-            return RespResult.fail("人机验证失败，请重试");
-        }
-        if (Assert.isEmpty(userAccount)) {
-            return RespResult.fail("账号信息不可为空");
-        }
-        SysUser user = userAccount.contains("@")
-                ? userService.queryByEmail(userAccount)
-                : userService.queryByPhone(userAccount);
-        if (Assert.isEmpty(user)) {
-            return RespResult.fail("账号不存在或尚未绑定");
-        }
-        try {
-            if (userAccount.contains("@")) {
-                if (Assert.notEmpty(agentConfig) && !agentConfig.emailConfigEmpty()) {
-                    sendSmsCode.sendPasswordResetEmail(
-                            agentConfig.emailServiceVoConfig(),
-                            agentConfig.emailTemplateVoConfig(),
-                            userAccount
-                    );
-                } else {
-                    sendSmsCode.sendPasswordResetEmail(
-                            SystemConfig.emailConfig,
-                            SystemConfig.emailTemplateConfig,
-                            userAccount
-                    );
-                }
-            } else {
-                if (!ValidatorUtils.isPhone(userAccount)) {
-                    return RespResult.fail("手机号码格式错误");
-                }
-                if (Assert.notEmpty(agentConfig) && !agentConfig.smsConfigEmpty()) {
-                    sendSmsCode.sendPasswordResetSms(
-                            agentConfig.smsServiceVoConfig(),
-                            agentConfig.smsTemplateVoConfig(),
-                            userAccount
-                    );
-                } else {
-                    sendSmsCode.sendPasswordResetSms(
-                            SystemConfig.smsConfig,
-                            SystemConfig.smsTemplateConfig,
-                            userAccount
-                    );
-                }
-            }
-        } catch (Exception e) {
-            return RespResult.fail("验证码发送失败：" + e.getMessage());
-        }
-        return RespResult.success("验证码已发送，5分钟内有效");
-    }
-
-    @PostMapping("/login/resetPassword")
-    @ResponseBody
-    public RespResult resetPassword(String userAccount, String code, String newPassword,
-                                    String confirmPassword) {
-        if (Assert.isEmpty(userAccount) || Assert.isEmpty(code)
-                || Assert.isEmpty(newPassword) || Assert.isEmpty(confirmPassword)) {
-            return RespResult.fail("请完整填写重置信息");
-        }
-        if (!newPassword.equals(confirmPassword)) {
-            return RespResult.fail("两次输入的密码不一致");
-        }
-        try {
-            userService.resetPassword(userAccount, code, newPassword);
-            return RespResult.success("密码重置成功，请使用新密码登录");
-        } catch (BusinessException e) {
-            return RespResult.fail(e.getMessage());
-        }
     }
 
     /**
