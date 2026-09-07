@@ -21,7 +21,7 @@ import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 @EnableAsync
 @SpringBootApplication
 @EnableScheduling
-@MapperScan("com.kuocai.cdn.dao")
+@MapperScan({"com.kuocai.cdn.dao", "com.kuocai.cdn.common.mysql.dao"})
 public class KuocaiCdnBootApplication implements SchedulingConfigurer {
 
     @Value("${spring.task.scheduling.pool.size:8}")

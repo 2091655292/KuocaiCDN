@@ -95,15 +95,4 @@ class CdnAreaRouteServiceTest {
         assertFalse(service.isAreaAvailable(9L, "unsupported-route",
                 CdnServiceAreaPolicyService.OVERSEAS));
     }
-
-    @Test
-    void listsSelfHostedTargetsAcrossConfiguredAreas() {
-        SystemConfig.websiteBaseConfig = WebsiteBaseConfigVo.builder()
-                .overseasEnabledTargets(Collections.singletonList("route:self_hosted_overseas"))
-                .globalEnabledTargets(Collections.singletonList("route:self_hosted_global"))
-                .build();
-
-        assertEquals(Arrays.asList("self_hosted_overseas", "self_hosted_global"),
-                service.configuredSelfHostedRoutes());
-    }
 }

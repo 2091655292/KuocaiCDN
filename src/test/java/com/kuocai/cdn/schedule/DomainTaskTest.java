@@ -2,7 +2,6 @@ package com.kuocai.cdn.schedule;
 
 import com.kuocai.cdn.api.DomainBasicInfo;
 import com.kuocai.cdn.api.DomainConfig;
-import com.kuocai.cdn.async.SmsAsync;
 import com.kuocai.cdn.entity.CdnDomain;
 import com.kuocai.cdn.service.CdnDomainService;
 import com.kuocai.cdn.service.CdnDomainStatisticsService;
@@ -74,7 +73,6 @@ class DomainTaskTest {
     private DomainTask task(ICdnPlatformService platform) {
         return new DomainTask(
                 mock(AliyunDomainServiceImpl.class),
-                mock(SmsAsync.class),
                 mock(CdnDomainStatisticsService.class),
                 mock(SysUserService.class),
                 Runnable::run) {

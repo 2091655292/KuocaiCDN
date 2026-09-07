@@ -7,12 +7,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Title -->
-    <title th:if="${!openAgent}">[[${websiteBaseConfig.websiteName}]] 用户登录</title>
-    <title th:if="${openAgent}">[[${agentConfig.websiteName}]] 用户登录</title>
+    <title>[[${websiteBaseConfig.websiteName}]] 用户登录</title>
 
     <!-- Favicon -->
-    <link th:if="${!openAgent}" rel="shortcut icon" th:href="${websiteBaseConfig.websiteIconImg}">
-    <link th:if="${openAgent}" rel="shortcut icon" th:href="${agentConfig.icon}">
+    <link rel="shortcut icon" th:href="${websiteBaseConfig.websiteIconImg}">
 
     <!-- Font -->
     <link th:href="@{common/assets/css/css2.css}" rel="stylesheet">
@@ -184,10 +182,8 @@
 <header class="position-absolute top-0 start-0 end-0 mt-3 mx-3">
     <div class="d-flex d-lg-none justify-content-between">
         <a href="index">
-            <img th:if="${!openAgent}" class="w-100" th:src="${websiteBaseConfig != null and !#strings.isEmpty(websiteBaseConfig.websiteLogoImg)} ? ${websiteBaseConfig.websiteLogoImg} : @{dashboard/assets/svg/logos/logo.svg}" data-hs-theme-appearance="default" style="min-width: 7rem; max-width: 7rem;">
-            <img th:if="${!openAgent}" class="w-100" th:src="${websiteBaseConfig != null and !#strings.isEmpty(websiteBaseConfig.websiteLogoImg)} ? ${websiteBaseConfig.websiteLogoImg} : @{dashboard/assets/svg/logos-light/logo.svg}" data-hs-theme-appearance="dark" style="min-width: 7rem; max-width: 7rem;">
-            <img th:if="${openAgent}" class="w-100" th:src="${agentConfig.logoDashboard}" data-hs-theme-appearance="default" style="min-width: 7rem; max-width: 7rem;">
-            <img th:if="${openAgent}" class="w-100" th:src="${agentConfig.logoDashboard}" data-hs-theme-appearance="dark" style="min-width: 7rem; max-width: 7rem;">
+            <img class="w-100" th:src="${websiteBaseConfig != null and !#strings.isEmpty(websiteBaseConfig.websiteLogoImg)} ? ${websiteBaseConfig.websiteLogoImg} : @{dashboard/assets/svg/logos/logo.svg}" data-hs-theme-appearance="default" style="min-width: 7rem; max-width: 7rem;">
+            <img class="w-100" th:src="${websiteBaseConfig != null and !#strings.isEmpty(websiteBaseConfig.websiteLogoImg)} ? ${websiteBaseConfig.websiteLogoImg} : @{dashboard/assets/svg/logos-light/logo.svg}" data-hs-theme-appearance="dark" style="min-width: 7rem; max-width: 7rem;">
         </a>
 
     </div>
@@ -228,10 +224,8 @@
                 <div class="position-absolute top-0 start-0 end-0 mt-3 mx-3">
                     <div class="d-none d-lg-flex justify-content-between">
                         <a href=".">
-                            <img th:if="${!openAgent}" class="w-100" th:src="${websiteBaseConfig != null and !#strings.isEmpty(websiteBaseConfig.websiteLogoImg)} ? ${websiteBaseConfig.websiteLogoImg} : @{dashboard/assets/svg/logos/logo.svg}" data-hs-theme-appearance="default" style="min-width: 7rem; max-width: 7rem;">
-                            <img th:if="${!openAgent}" class="w-100" th:src="${websiteBaseConfig != null and !#strings.isEmpty(websiteBaseConfig.websiteLogoImg)} ? ${websiteBaseConfig.websiteLogoImg} : @{dashboard/assets/svg/logos-light/logo.svg}" data-hs-theme-appearance="dark" style="min-width: 7rem; max-width: 7rem;">
-                            <img th:if="${openAgent}" class="w-100" th:src="${agentConfig.logoDashboard}" data-hs-theme-appearance="default" style="min-width: 7rem; max-width: 7rem;">
-                            <img th:if="${openAgent}" class="w-100" th:src="${agentConfig.logoDashboard}" data-hs-theme-appearance="dark" style="min-width: 7rem; max-width: 7rem;">
+                            <img class="w-100" th:src="${websiteBaseConfig != null and !#strings.isEmpty(websiteBaseConfig.websiteLogoImg)} ? ${websiteBaseConfig.websiteLogoImg} : @{dashboard/assets/svg/logos/logo.svg}" data-hs-theme-appearance="default" style="min-width: 7rem; max-width: 7rem;">
+                            <img class="w-100" th:src="${websiteBaseConfig != null and !#strings.isEmpty(websiteBaseConfig.websiteLogoImg)} ? ${websiteBaseConfig.websiteLogoImg} : @{dashboard/assets/svg/logos-light/logo.svg}" data-hs-theme-appearance="dark" style="min-width: 7rem; max-width: 7rem;">
                         </a>
 
                     </div>
@@ -255,19 +249,7 @@
                     <!-- Form -->
                     <div class="text-center">
                         <div class="mb-5">
-                            <h1 th:if="${!openAgent}" class="display-5" th:text="${websiteBaseConfig.websiteName + ' 用户登录'}"></h1>
-                            <h1 th:if="${openAgent}" class="display-5" th:text="${agentConfig.websiteName + ' 用户登录'}"></h1>
-                        </div>
-
-                        <div th:if="${!openAgent and weChatLoginEnabled}" class="d-grid mb-4">
-                            <button class="btn btn-white btn-lg" onclick="getWechatQrCode(true)">
-                                                <span class="d-flex justify-content-center align-items-center">
-                                                  <img class="avatar avatar-xss me-2"
-                                                       th:src="@{dashboard/assets/svg/brands/wechat-icon.svg}"
-                                                       alt="Image Description">
-                                                  通过微信登录
-                                                </span>
-                            </button>
+<h1 class="display-5" th:text="${websiteBaseConfig.websiteName + ' 用户登录'}"></h1>
                         </div>
 
                         <span class="divider-center text-muted mb-4">还没有账号？ <a class="link"
@@ -437,5 +419,4 @@
 </body>
 </html>
 
-<div th:replace="common/common-dashboard::#agent"></div>
 

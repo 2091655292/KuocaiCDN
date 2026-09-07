@@ -138,6 +138,8 @@ public class BaseController {
         map.put("mainLevel2Menus", sysMenuService.queryMainLevel2Menus());
         map.put("dashboardLogo", resolveDashboardLogo());
         map.put("dashboardIcon", resolveDashboardIcon());
+        map.put("openAgent", false);
+        map.put("weChatLoginEnabled", false);
     }
 
     /**

@@ -160,6 +160,14 @@ public class LoginController extends BaseController {
 
 
     /**
+     * 根路径重定向到用户登录页
+     */
+    @GetMapping("/")
+    public String index() {
+        return "redirect:/user-login";
+    }
+
+    /**
      * 管理员-登录
      */
     @GetMapping("/kuocaiadmin")
