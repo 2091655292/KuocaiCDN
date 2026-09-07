@@ -16,6 +16,7 @@ import com.kuocai.cdn.service.SysConfigService;
 import com.kuocai.cdn.util.Assert;
 import com.kuocai.cdn.vo.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -25,6 +26,7 @@ import javax.annotation.PostConstruct;
  */
 @Slf4j
 @Component
+@DependsOnDatabaseInitialization
 public class PreloadComponent {
 
     PreloadComponent(SysConfigService sysConfigService) {

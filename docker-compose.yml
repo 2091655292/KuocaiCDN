@@ -1,0 +1,108 @@
+name: multi-cloud-cdn
+
+services:
+  app:
+    build: .
+    image: multi-cloud-cdn:M1.0.0
+    container_name: mcc-app
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      TZ: Asia/Shanghai
+      SERVER_PORT: ${SERVER_PORT:-8000}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--XX:MaxRAMPercentage=60.0}
+      DB_URL: ${DB_URL:?DB_URL is required - copy .env.example to .env and point it to your database server}
+      DB_USERNAME: ${DB_USERNAME:?DB_USERNAME is required - see .env.example}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required - see .env.example}
+      REDIS_HOST: ${REDIS_HOST:?REDIS_HOST is required - see .env.example}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      INSTALLATION_BOOTSTRAP_PASSWORD: ${INSTALLATION_BOOTSTRAP_PASSWORD:-Admin@123456}
+      APP_UPLOAD_DIR: /app/uploads
+      JWT_PUBLIC_KEY: |
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxG3EhjgJh1gskR6t6o22
+        mix4REhYESbhRzQdBHuzDAafq6BDBHrrzs3wv1Eb0XGzHfQQyZCJjgF+hXQlDd4y
+        CTCgcfuLGqozMOu+STO1FC1xQyy7PXsY4Vvbp3LOFpUQdZFie+VXKW4JwM0vbMcD
+        mZwtI9basmOFptv2nzw6Gg40yrIs+i14aQCYuBpuE/31rJgCuGY6vyXFwUvXSGa8
+        l3/sg+v2sdOUiFuw979mtrPj+u0zUrDPfzqpCTC/p7AzMyVkN0w0XyuhoAzwvg1/
+        xK9j0ltKyNS0o+MRirrtvYkc8CPdrZRYkTCXCzs9agY6ec7VaRu3+6NdWZXfmxwQ
+        uQIDAQAB
+        -----END PUBLIC KEY-----
+      JWT_PRIVATE_KEY: |
+        -----BEGIN PRIVATE KEY-----
+        MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDEbcSGOAmHWCyR
+        Hq3qjbaaLHhESFgRJuFHNB0Ee7MMBp+roEMEeuvOzfC/URvRcbMd9BDJkImOAX6F
+        dCUN3jIJMKBx+4saqjMw675JM7UULXFDLLs9exjhW9uncs4WlRB1kWJ75VcpbgnA
+        zS9sxwOZnC0j1tqyY4Wm2/afPDoaDjTKsiz6LXhpAJi4Gm4T/fWsmAK4Zjq/JcXB
+        S9dIZryXf+yD6/ax05SIW7D3v2a2s+P67TNSsM9/OqkJML+nsDMzJWQ3TDRfK6Gg
+        DPC+DX/Er2PSW0rI1LSj4xGKuu29iRzwI92tlFiRMJcLOz1qBjp5ztVpG7f7o11Z
+        ld+bHBC5AgMBAAECggEARbiojvOI/k9f0krPdHfEnsi2D5aWG9BvGfT3b8XwcY5Q
+        UnzaDNcMqCUVFPNXKmpvJ2ygIMt657rEC96D4H5DyFtIN+0PHPHYpb6nlhgSaA0R
+        LMTN2S6+UA9o0fDAEefrJa/rAwsOexghwhuSf8vMDVQP+a6jhbopkGZ3DWI1RVWy
+        UHWwW2gnmiQWcyaZzOzI93hfsdz4hwhItZQokxdOrFbrwVXqbPRckS8DQ7D7mNvp
+        OlWuGK4JF0FhgxZ/bS4+JYy5RdI0UxC754oQDEM41kTIMT5uFIyCZBJSHBiQd5tQ
+        30ETA/4OJ/JMyovEq4TVLh5A20+5Wwiy7FkS0H4UmQKBgQDlPNDI/HAqaLpweAmZ
+        fKE3oUJLHeMRu0cpnm5A+MryUN6Kh9xtMXIHXyMRqMm9baR8xzS7z7diKh9Cy15G
+        K3xvudOvwCraRcYRtyVoNIoZRvEIT/RHKxQqKL1y+ACqSCPClIsN+ZQ1p/ZVjQMk
+        +n2ZpenkD0EQgARvsWQa3SMaJwKBgQDbXGbOnkadaRFZL+u1+vlHmtkmIsq1/XSn
+        6cL/SR3qrcCdNgn+QXenpOw9/mv5P/9Vs4YDzOIIZteOQDL7vqeLWa5WKvseZMq1
+        yUa1sspTszuAh7jVUW+7OiSmI9rl+seffEK0ZhhHpV2CChwE5gUQ3vMbSPzqq+kU
+        vEoqPFKqHwKBgFZ75DT/b/2/9x65Wr3KVDRdpVobk3A8HHPqLqRaeI6EzgCrkxCr
+        B98aGGvwJvRNajIdIZr9mazyQUr82LtWaqLoE6IJuOESU9CZLQasU7GHnyXIrFsx
+        OHFTX24BfJbBkqQ1UGTcVPsNPBU4lwgbbMlL2/rLenuUIJhW73JnHXgfAoGANMtX
+        XvEO88Ge0EVNSJ4fstEc5CXJfeWDVwpWyRQy5BFvYybnXs8o2itCRGVgXTu+20R6
+        w51i5TzDMlRXMOmg71PlNo3fpGADvZ60qvRd56kib/u6S3TvHDORMH8+ps0lkEfa
+        0gokW9H74FlIhxFJNNdD0VROsrgvP7NVcjbUemcCgYBVnraP8CvFXYbQvbGTzrEk
+        m4RH1ru5Fs+gm3sL0v3aPv1TWnlohTnQoh6pn0CtPEDgRpUMFp/Tlnqg7qu5ra7U
+        AKW+WcV/EtOLROIat8ecz/1HZ6Dn1tvdyIEC+lLt1RCtw/szD/82tbNahtpcmoSD
+        tBCO6bGO9iBe28DO2UtMTQ==
+        -----END PRIVATE KEY-----
+      CONFIG_RSA_PUBLIC_KEY: |
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxG3EhjgJh1gskR6t6o22
+        mix4REhYESbhRzQdBHuzDAafq6BDBHrrzs3wv1Eb0XGzHfQQyZCJjgF+hXQlDd4y
+        CTCgcfuLGqozMOu+STO1FC1xQyy7PXsY4Vvbp3LOFpUQdZFie+VXKW4JwM0vbMcD
+        mZwtI9basmOFptv2nzw6Gg40yrIs+i14aQCYuBpuE/31rJgCuGY6vyXFwUvXSGa8
+        l3/sg+v2sdOUiFuw979mtrPj+u0zUrDPfzqpCTC/p7AzMyVkN0w0XyuhoAzwvg1/
+        xK9j0ltKyNS0o+MRirrtvYkc8CPdrZRYkTCXCzs9agY6ec7VaRu3+6NdWZXfmxwQ
+        uQIDAQAB
+        -----END PUBLIC KEY-----
+      CONFIG_RSA_PRIVATE_KEY: |
+        -----BEGIN PRIVATE KEY-----
+        MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDEbcSGOAmHWCyR
+        Hq3qjbaaLHhESFgRJuFHNB0Ee7MMBp+roEMEeuvOzfC/URvRcbMd9BDJkImOAX6F
+        dCUN3jIJMKBx+4saqjMw675JM7UULXFDLLs9exjhW9uncs4WlRB1kWJ75VcpbgnA
+        zS9sxwOZnC0j1tqyY4Wm2/afPDoaDjTKsiz6LXhpAJi4Gm4T/fWsmAK4Zjq/JcXB
+        S9dIZryXf+yD6/ax05SIW7D3v2a2s+P67TNSsM9/OqkJML+nsDMzJWQ3TDRfK6Gg
+        DPC+DX/Er2PSW0rI1LSj4xGKuu29iRzwI92tlFiRMJcLOz1qBjp5ztVpG7f7o11Z
+        ld+bHBC5AgMBAAECggEARbiojvOI/k9f0krPdHfEnsi2D5aWG9BvGfT3b8XwcY5Q
+        UnzaDNcMqCUVFPNXKmpvJ2ygIMt657rEC96D4H5DyFtIN+0PHPHYpb6nlhgSaA0R
+        LMTN2S6+UA9o0fDAEefrJa/rAwsOexghwhuSf8vMDVQP+a6jhbopkGZ3DWI1RVWy
+        UHWwW2gnmiQWcyaZzOzI93hfsdz4hwhItZQokxdOrFbrwVXqbPRckS8DQ7D7mNvp
+        OlWuGK4JF0FhgxZ/bS4+JYy5RdI0UxC754oQDEM41kTIMT5uFIyCZBJSHBiQd5tQ
+        30ETA/4OJ/JMyovEq4TVLh5A20+5Wwiy7FkS0H4UmQKBgQDlPNDI/HAqaLpweAmZ
+        fKE3oUJLHeMRu0cpnm5A+MryUN6Kh9xtMXIHXyMRqMm9baR8xzS7z7diKh9Cy15G
+        K3xvudOvwCraRcYRtyVoNIoZRvEIT/RHKxQqKL1y+ACqSCPClIsN+ZQ1p/ZVjQMk
+        +n2ZpenkD0EQgARvsWQa3SMaJwKBgQDbXGbOnkadaRFZL+u1+vlHmtkmIsq1/XSn
+        6cL/SR3qrcCdNgn+QXenpOw9/mv5P/9Vs4YDzOIIZteOQDL7vqeLWa5WKvseZMq1
+        yUa1sspTszuAh7jVUW+7OiSmI9rl+seffEK0ZhhHpV2CChwE5gUQ3vMbSPzqq+kU
+        vEoqPFKqHwKBgFZ75DT/b/2/9x65Wr3KVDRdpVobk3A8HHPqLqRaeI6EzgCrkxCr
+        B98aGGvwJvRNajIdIZr9mazyQUr82LtWaqLoE6IJuOESU9CZLQasU7GHnyXIrFsx
+        OHFTX24BfJbBkqQ1UGTcVPsNPBU4lwgbbMlL2/rLenuUIJhW73JnHXgfAoGANMtX
+        XvEO88Ge0EVNSJ4fstEc5CXJfeWDVwpWyRQy5BFvYybnXs8o2itCRGVgXTu+20R6
+        w51i5TzDMlRXMOmg71PlNo3fpGADvZ60qvRd56kib/u6S3TvHDORMH8+ps0lkEfa
+        0gokW9H74FlIhxFJNNdD0VROsrgvP7NVcjbUemcCgYBVnraP8CvFXYbQvbGTzrEk
+        m4RH1ru5Fs+gm3sL0v3aPv1TWnlohTnQoh6pn0CtPEDgRpUMFp/Tlnqg7qu5ra7U
+        AKW+WcV/EtOLROIat8ecz/1HZ6Dn1tvdyIEC+lLt1RCtw/szD/82tbNahtpcmoSD
+        tBCO6bGO9iBe28DO2UtMTQ==
+        -----END PRIVATE KEY-----
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - app-uploads:/app/uploads
+
+volumes:
+  app-uploads:

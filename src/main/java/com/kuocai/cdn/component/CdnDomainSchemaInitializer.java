@@ -1,6 +1,7 @@
 package com.kuocai.cdn.component;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -8,6 +9,7 @@ import javax.annotation.PostConstruct;
 
 @Slf4j
 @Component
+@DependsOnDatabaseInitialization
 public class CdnDomainSchemaInitializer {
 
     private static final String LEGACY_EDGEONE_FAILURE_REASON =
