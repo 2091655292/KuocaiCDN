@@ -111,6 +111,27 @@ npm run dev
 
 后端默认监听 `8082`，前端开发服务器代理 `/api` 到后端。数据库连接也可通过环境变量 `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` / `DB_PREFIX` 预置。
 
+### 方式四：Kubernetes（容器编排）
+
+仓库内置 Kubernetes 编排清单 `deploy/kubernetes.yaml`，包含 Namespace、PersistentVolumeClaim、Deployment、Service、Ingress 全套资源：
+
+```bash
+# 一键部署
+kubectl apply -f deploy/kubernetes.yaml
+
+# 查看运行状态
+kubectl -n dnsmgr-pro get pods,svc
+
+# 集群内访问（或临时端口转发）
+kubectl -n dnsmgr-pro port-forward svc/dnsmgr-pro 8082:8082
+```
+
+部署后访问 `http://<NodeIP>:8082`（或你的 Ingress 域名），同样进入系统安装页完成初始化。
+
+- PersistentVolumeClaim 持久化安装配置（`/app/data`），重建 Pod 不丢配置。
+- 数据库选项可在 Deployment 的 `env` 注释中开启环境变量预置，或在安装页填写外部数据库连接。
+- 若使用 GHCR 私有镜像（`ghcr.io/<owner>/dnsmgr-pro`），需另行配置 `imagePullSecrets`；清单默认使用 Docker Hub 公开镜像 `ssdxftx/dnsmgr-pro`。
+
 ### 从彩虹 DNS 迁入
 
 无需任何数据迁移脚本。直接在新系统安装页填写彩虹 DNS 的数据库连接信息（表前缀默认 `dnsmgr_`，如自定义过请填写实际前缀），即完成绑定，原管理员账号可直接登录。
@@ -130,6 +151,7 @@ dnsmgr-refactor/
 │       ├── installer.ts  # 安装/绑定逻辑
 │       └── index.ts      # 入口
 ├── frontend/         # Vue 3 + Naive UI + Vite
+├── deploy/           # 容器编排清单（kubernetes.yaml）
 ├── Dockerfile        # 多阶段构建（前端构建 + 后端运行）
 ├── docker-compose.yml
 └── .env.example

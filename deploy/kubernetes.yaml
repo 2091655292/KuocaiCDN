@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dnsmgr-pro
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dnsmgr-pro-data
+  namespace: dnsmgr-pro
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dnsmgr-pro
+  namespace: dnsmgr-pro
+  labels:
+    app: dnsmgr-pro
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dnsmgr-pro
+  template:
+    metadata:
+      labels:
+        app: dnsmgr-pro
+    spec:
+      containers:
+        - name: dnsmgr-pro
+          image: ssdxftx/dnsmgr-pro:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8082
+              name: http
+          env:
+            - name: TZ
+              value: Asia/Shanghai
+            - name: DNSMGR_DATA_DIR
+              value: /app/data
+            # 如需预置数据库连接，可取消注释（首次打开安装页填写更直观）
+            # - name: DB_HOST
+            #   value: your-mysql-host
+            # - name: DB_PORT
+            #   value: "3306"
+            # - name: DB_USER
+            #   value: dnsmgr
+            # - name: DB_PASSWORD
+            #   value: your-password
+            # - name: DB_NAME
+            #   value: dnsmgr
+            # - name: DB_PREFIX
+            #   value: dnsmgr_
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8082
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: dnsmgr-pro-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dnsmgr-pro
+  namespace: dnsmgr-pro
+spec:
+  type: ClusterIP
+  selector:
+    app: dnsmgr-pro
+  ports:
+    - port: 8082
+      targetPort: 8082
+      name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dnsmgr-pro
+  namespace: dnsmgr-pro
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  rules:
+    - host: dns.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dnsmgr-pro
+                port:
+                  number: 8082
