@@ -1,0 +1,22 @@
+/* 移动端工具栏响应式布局
+ * 桌面端（>768px）保持原有横向 space-between 排列不变，
+ * 手机端标题独占一行，按钮组保持一行排列（不换行），并适当收紧按钮间距与内边距。 */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 8px;
+  }
+  .toolbar .n-space {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+  }
+  .toolbar .n-space .n-button {
+    flex-shrink: 0;
+    padding: 0 9px;
+    font-size: 13px;
+  }
+}

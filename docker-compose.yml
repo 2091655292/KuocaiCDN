@@ -1,0 +1,40 @@
+name: dnsmgr-refactor
+
+services:
+  app:
+    build: .
+    image: dnsmgr-refactor:latest
+    container_name: dnsmgr-app
+    restart: always
+    ports:
+      - "${APP_PORT:-8082}:8082"
+    volumes:
+      - app-data:/app/data
+    environment:
+      TZ: Asia/Shanghai
+      # 数据库连接信息建议通过首次启动的“系统安装”页面填写（写入持久化卷 /app/data/config.json）。
+      # 如有需要，也可通过环境变量预置（页面填写会覆盖环境变量）：
+      # DB_HOST: ${DB_HOST:-127.0.0.1}
+      # DB_PORT: ${DB_PORT:-3306}
+      # DB_USER: ${DB_USER:-dnsmgr}
+      # DB_PASSWORD: ${DB_PASSWORD:-}
+      # DB_NAME: ${DB_NAME:-dnsmgr}
+      # DB_PREFIX: ${DB_PREFIX:-dnsmgr_}
+
+  # 可选：内置 MySQL（应用与数据库分离，通常建议使用你已有的 MySQL/彩虹 DNS 数据库）。
+  # 如需本 compose 一并启动数据库，去掉下面的注释，并在安装页面“数据库主机”填写 mysql。
+  # mysql:
+  #   image: mysql:5.7
+  #   container_name: dnsmgr-mysql
+  #   restart: always
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+  #     TZ: Asia/Shanghai
+  #   volumes:
+  #     - mysql-data:/var/lib/mysql
+  #   command:
+  #     - --sql_mode=STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+
+volumes:
+  app-data:
+  # mysql-data:
