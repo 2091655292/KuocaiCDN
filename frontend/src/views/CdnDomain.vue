@@ -45,9 +45,6 @@
             <n-radio value="domain">域名源站</n-radio>
           </n-radio-group>
         </n-form-item>
-        <n-form-item v-if="!isZoneType" label="加速区域">
-          <n-select v-model:value="form.service_area" :options="areaOptions" />
-        </n-form-item>
       </n-form>
       <template #footer>
         <n-space justify="end">
@@ -98,13 +95,7 @@ const saving = ref(false);
 const syncing = ref(false);
 const syncAid = ref<number | null>(null);
 const syncDid = ref<number>(0);
-const form = reactive<any>({ aid: null, did: null, zone_id: null, name: '', origin: '', origin_type: 'ipaddr', service_area: 'mainland_china' });
-
-const areaOptions = [
-  { label: '中国大陆', value: 'mainland_china' },
-  { label: '亚太及海外', value: 'overseas' },
-  { label: '全球', value: 'global' },
-];
+const form = reactive<any>({ aid: null, did: null, zone_id: null, name: '', origin: '', origin_type: 'ipaddr' });
 
 const isZoneType = computed(() => accountTypes.value[form.aid] === 'tencent_edgeone' || accountTypes.value[form.aid] === 'aliyun_esa');
 
@@ -189,7 +180,7 @@ async function onAccountChange(aid: number) {
 }
 
 function openAdd() {
-  Object.assign(form, { aid: null, did: null, zone_id: null, name: '', origin: '', origin_type: 'ipaddr', service_area: 'mainland_china' });
+  Object.assign(form, { aid: null, did: null, zone_id: null, name: '', origin: '', origin_type: 'ipaddr' });
   zoneOptions.value = [];
   showAdd.value = true;
 }
