@@ -86,7 +86,7 @@ docker run -d \
 
 ```bash
 # 克隆仓库
-git clone https://github.com/2091655292/KuocaiCDN.git dnsmgr-pro
+git clone https://github.com/2091655292/dnsmgr-Pro.git dnsmgr-pro
 cd dnsmgr-pro
 
 # 构建并启动
