@@ -17,7 +17,6 @@
 | 后端 | PHP 8（ThinkPHP） | Node.js / TypeScript（Fastify） |
 | 前端 | 服务端渲染 + jQuery/Bootstrap | Vue 3 + Naive UI（SPA，前后端分离） |
 | 接口 | ThinkPHP 路由 | RESTful JSON API | 
-| 部署 | PHP + MySQL 传统环境 | Docker 单镜像 + docker-compose 一键部署 |
 | 初始化 | 网页安装向导（依赖 PHP） | Web 安装向导（填库即可）+ 启动自动迁移 |
 | 用户体系 | 管理员后台添加用户 | 新增**自助注册**（邮箱验证码 / 注册码，管理员可配置开关与方式）、TOTP 两步验证 |
 | 数据兼容 | — | **绑定彩虹 DNS 现有数据库直接使用**，表结构一致、免迁移 |
