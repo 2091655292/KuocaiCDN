@@ -34,7 +34,7 @@
         :bordered="false"
         @update:checked-row-keys="onCheckedRowKeys"
       />
-      <n-empty v-if="!loading && !tasks.length" description="暂无容灾切换策略" />
+      <n-empty class="list-empty" v-if="!loading && !tasks.length" description="暂无容灾切换策略" />
     </n-card>
   </div>
 </template>

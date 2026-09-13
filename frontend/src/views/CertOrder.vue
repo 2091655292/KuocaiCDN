@@ -14,7 +14,7 @@
         </div>
       </template>
       <n-data-table :columns="columns" :data="orders" :loading="loading" :bordered="false" />
-      <n-empty v-if="!loading && !orders.length" description="暂无证书订单" />
+      <n-empty class="list-empty" v-if="!loading && !orders.length" description="暂无证书订单" />
     </n-card>
 
     <!-- 添加/编辑弹窗 -->

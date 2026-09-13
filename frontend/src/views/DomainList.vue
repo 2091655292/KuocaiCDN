@@ -25,7 +25,7 @@
         :row-key="(row: any) => row.id"
         @update:checked-row-keys="(k: any[]) => (checked = k)"
       />
-      <n-empty v-if="!loading && !domains.length" description="暂无域名，点击「导入域名」从 DNS 账户接入" />
+      <n-empty class="list-empty" v-if="!loading && !domains.length" description="暂无域名，点击「导入域名」从 DNS 账户接入" />
     </n-card>
 
     <!-- 导入域名弹窗 -->

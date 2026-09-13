@@ -39,7 +39,7 @@
         size="small"
         @update:checked-row-keys="(k: any[]) => (selection = k)"
       />
-      <n-empty v-if="!loading && !rows.length" description="暂无自定义主机名" />
+      <n-empty class="list-empty" v-if="!loading && !rows.length" description="暂无自定义主机名" />
     </n-card>
 
     <!-- 单个添加/编辑 -->

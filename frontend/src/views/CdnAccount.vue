@@ -11,7 +11,7 @@
         </div>
       </template>
       <n-data-table :columns="columns" :data="accounts" :loading="loading" :bordered="false" />
-      <n-empty v-if="!loading && !accounts.length" description="暂无 CDN 账户" />
+      <n-empty class="list-empty" v-if="!loading && !accounts.length" description="暂无 CDN 账户" />
     </n-card>
 
     <n-modal v-model:show="showEdit" preset="card" :title="editingId ? '编辑账户' : '添加账户'" style="max-width:520px" :mask-closable="false">

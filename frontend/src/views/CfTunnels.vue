@@ -12,7 +12,7 @@
 
     <n-card :bordered="false" size="small" style="margin-top: 12px">
       <n-data-table :columns="columns" :data="rows" :loading="loading" :row-key="(row: any) => row.id" :bordered="false" size="small" />
-      <n-empty v-if="!loading && !rows.length" description="暂无 Tunnel" />
+      <n-empty class="list-empty" v-if="!loading && !rows.length" description="暂无 Tunnel" />
     </n-card>
 
     <!-- 创建 -->

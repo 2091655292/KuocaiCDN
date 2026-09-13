@@ -32,7 +32,7 @@
       </n-space>
 
       <n-data-table :columns="logColumns" :data="logs" :loading="loading" :pagination="pagination" :bordered="false" />
-      <n-empty v-if="!loading && !logs.length" description="暂无切换记录" />
+      <n-empty class="list-empty" v-if="!loading && !logs.length" description="暂无切换记录" />
     </n-card>
   </div>
 </template>

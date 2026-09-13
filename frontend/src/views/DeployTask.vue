@@ -11,7 +11,7 @@
         </div>
       </template>
       <n-data-table :columns="columns" :data="tasks" :loading="loading" :bordered="false" />
-      <n-empty v-if="!loading && !tasks.length" description="暂无部署任务" />
+      <n-empty class="list-empty" v-if="!loading && !tasks.length" description="暂无部署任务" />
     </n-card>
 
     <n-modal v-model:show="showEdit" preset="card" :title="editingId ? '编辑任务' : '添加部署任务'" style="max-width:640px" :mask-closable="false">

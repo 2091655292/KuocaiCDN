@@ -14,7 +14,7 @@
       </n-space>
 
       <n-data-table :columns="columns" :data="logs" :loading="loading" :pagination="pagination" :row-key="(row: any) => row.id" :bordered="false" />
-      <n-empty v-if="!loading && !logs.length" description="暂无日志" />
+      <n-empty class="list-empty" v-if="!loading && !logs.length" description="暂无日志" />
     </n-card>
   </div>
 </template>

@@ -18,7 +18,7 @@
       </n-space>
 
       <n-data-table :columns="columns" :data="users" :loading="loading" :pagination="pagination" :row-key="(row: any) => row.id" :bordered="false" />
-      <n-empty v-if="!loading && !users.length" description="暂无用户" />
+      <n-empty class="list-empty" v-if="!loading && !users.length" description="暂无用户" />
     </n-card>
 
     <n-modal v-model:show="showEdit" preset="card" :title="editingId ? '修改用户' : '添加用户'" style="max-width:520px" :mask-closable="false">

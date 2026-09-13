@@ -18,7 +18,7 @@
         </div>
       </template>
       <n-data-table :columns="columns" :data="domains" :loading="loading" :bordered="false" />
-      <n-empty v-if="!loading && !domains.length" description="暂无 CDN 加速域名" />
+      <n-empty class="list-empty" v-if="!loading && !domains.length" description="暂无 CDN 加速域名" />
     </n-card>
 
     <!-- 接入域名弹窗 -->

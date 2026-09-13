@@ -19,4 +19,10 @@
     padding: 0 9px;
     font-size: 13px;
   }
+  /* 列表页空状态提示沉到卡片底部，避免悬浮在屏幕中部 */
+  .list-empty {
+    min-height: 45vh;
+    justify-content: flex-end;
+    padding-bottom: 32px;
+  }
 }

@@ -19,7 +19,7 @@
         </div>
       </template>
       <n-data-table :columns="columns" :data="records" :loading="loading" :pagination="pagination" :bordered="false" />
-      <n-empty v-if="!loading && !records.length" description="暂无解析记录" />
+      <n-empty class="list-empty" v-if="!loading && !records.length" description="暂无解析记录" />
     </n-card>
 
     <n-modal v-model:show="showEdit" preset="card" :title="editingId ? '修改记录' : '添加记录'" style="max-width:640px" :mask-closable="false">

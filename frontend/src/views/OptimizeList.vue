@@ -26,7 +26,7 @@
       </n-space>
 
       <n-data-table :columns="columns" :data="tasks" :loading="loading" :pagination="pagination" :row-key="(row: any) => row.id" :bordered="false" />
-      <n-empty v-if="!loading && !tasks.length" description="暂无优选IP任务" />
+      <n-empty class="list-empty" v-if="!loading && !tasks.length" description="暂无优选IP任务" />
     </n-card>
   </div>
 </template>
